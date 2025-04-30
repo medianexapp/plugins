@@ -1,0 +1,7 @@
+id = "webdav"
+name = "Webdav"
+desc = "webdav driver plugin"
+icon = "webdav.png"
+author = ["labulakalia(labulakalia@gmail.com)"]
+version = "v0.0.1"
+changelog = ["webdav plugin init"]

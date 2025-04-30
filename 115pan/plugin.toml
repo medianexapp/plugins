@@ -1,0 +1,7 @@
+id = "115pan"
+name = "115Pan"
+desc = "115pan plugin"
+icon = "115pan.png"
+author = ["labulakalia(labulakalia@gmail.com)"]
+version = "v0.0.1"
+changelog = ["115pan plugin init"]

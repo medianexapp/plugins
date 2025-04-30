@@ -1,0 +1,7 @@
+id = "ftp"
+name = "Ftp"
+desc = "ftp driver plugin"
+icon = "ftp.png"
+author = ["labulakalia(labulakalia@gmail.com)"]
+version = "v0.0.1"
+changelog = ["ftp driver plugin init"]

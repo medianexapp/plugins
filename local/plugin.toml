@@ -1,0 +1,7 @@
+id = "local"
+name = "Local"
+desc = "local driver plugin"
+icon = "local.png"
+author = ["labulakalia(labulakalia@gmail.com)"]
+version = "v0.0.1"
+changelog = ["local driver plugin init"]

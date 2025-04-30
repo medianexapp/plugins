@@ -1,0 +1,7 @@
+id = "alipan"
+name = "Alipan"
+desc = "Alipan driver plugin"
+icon = "alipan.png"
+author = ["author1(labulakalia@gmail.com)"]
+version = "v0.0.1"
+changelog = ["alipan driver plugin init"]

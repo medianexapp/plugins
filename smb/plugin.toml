@@ -1,0 +1,7 @@
+id = "smb"
+name = "Smb"
+desc = "smb driver plugin"
+icon = "smb.png"
+author = ["labulakalia(labulakalia@gmail.com)"]
+version = "v0.0.1"
+changelog = ["smb driver plugin init"]

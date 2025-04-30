@@ -1,0 +1,7 @@
+id = "baidupan"
+name = "BaiduPan"
+desc = "baidu pan driver plugin"
+icon = "baidupan.png"
+author = ["labulakalia(labulakalia@gmail.com)"]
+version = "v0.0.1"
+changelog = ["init baidupan driver plugin "]

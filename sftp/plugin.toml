@@ -1,0 +1,7 @@
+id = "sftp"
+name = "Sftp"
+desc = "sftp driver plugin"
+icon = "sftp.png"
+author = ["labulakalia(labulakalia@gmail.com)"]
+version = "v0.0.1"
+changelog = ["sftp driver plugin init"]
