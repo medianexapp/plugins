@@ -16,14 +16,14 @@ type QrcodeData struct {
 type Response struct {
 	Errno     int    `json:"errno"`
 	ErrMsg    string `json:"errmsg"`
-	RequestId string `json:"request_id"`
+	RequestId any    `json:"request_id"`
 }
 
 // /
 type UserInfo struct {
 	BaiduName   string `json:"baidu_name"`
 	NetdiskName string `json:"netdisk_name"`
-	Uk          int    `json:"uk"`
+	Uk          uint64 `json:"uk"`
 	VipType     int    `json:"vip_type"`
 }
 

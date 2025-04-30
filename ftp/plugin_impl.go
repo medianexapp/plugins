@@ -190,6 +190,9 @@ func (p *PluginImpl) GetDirEntry(req *plugin.GetDirEntryRequest) (*plugin.DirEnt
 	}
 
 	for _, entry := range entries {
+		if strings.HasPrefix(entry.Name, ".") {
+			continue
+		}
 		fileEntry := &plugin.FileEntry{
 			Name:         entry.Name,
 			Size:         entry.Size,

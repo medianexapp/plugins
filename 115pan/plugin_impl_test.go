@@ -1,14 +1,12 @@
 package main
 
 import (
-	"encoding/base64"
 	"image/png"
 	"os"
 	"testing"
 
 	"github.com/boombuler/barcode"
 	"github.com/boombuler/barcode/qr"
-	"github.com/medianexapp/plugin_api/plugin"
 )
 
 func TestGenerateQrcode(t *testing.T) {
@@ -36,21 +34,5 @@ func TestAuth(t *testing.T) {
 	for _, method := range auth.AuthMethods {
 		t.Log(method)
 	}
-
-}
-
-func TestBase64(t *testing.T) {
-
-	token := &plugin.Token{
-		AccessToken:  "abcgsdjdiwjksko",
-		RefreshToken: "dwefojeirfpeijrfpwsoerf'pokp'sfoerf",
-	}
-	tokenData, _ := token.MarshalVT()
-	t.Log(tokenData)
-	base64Res := base64.URLEncoding.EncodeToString(tokenData)
-	t.Log(base64Res)
-
-	t.Log(base64.URLEncoding.DecodeString(base64Res))
-	// Eg14eHh4eHh4eHh4eHh4Ggx4eHh4eHh4eHh4eHg=
 
 }

@@ -226,7 +226,8 @@ func (p *PluginImpl) PluginAuthId() (string, error) {
 
 // GetDirEntry implements IPlugin.
 func (p *PluginImpl) GetDirEntry(req *plugin.GetDirEntryRequest) (*plugin.DirEntry, error) {
-	slog.Debug("get dir entry ", "req", req.FileEntry)
+	slog.Debug("get dir entry ", "req", req)
+
 	if req.Page == 0 {
 		req.Page = 1
 	}
@@ -244,6 +245,8 @@ func (p *PluginImpl) GetDirEntry(req *plugin.GetDirEntryRequest) (*plugin.DirEnt
 		}
 		fid = fileEntry.Fid
 	}
+	slog.Debug("get dir entry ", "fid", fid)
+
 	u := url.Values{}
 	u.Add("cid", fid)
 	u.Add("show_dir", "1")
@@ -255,6 +258,7 @@ func (p *PluginImpl) GetDirEntry(req *plugin.GetDirEntryRequest) (*plugin.DirEnt
 	if err != nil {
 		return nil, err
 	}
+	slog.Debug("get send ")
 
 	if resp.State == false {
 		slog.Error("get dir failed", "err", err)
@@ -282,6 +286,8 @@ func (p *PluginImpl) GetDirEntry(req *plugin.GetDirEntryRequest) (*plugin.DirEnt
 		}
 		dirEntry.FileEntries = append(dirEntry.FileEntries, entry)
 	}
+	slog.Debug("return")
+
 	return dirEntry, nil
 }
 

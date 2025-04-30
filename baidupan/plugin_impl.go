@@ -107,6 +107,7 @@ func (p *PluginImpl) CheckAuthMethod(authMethod *plugin.AuthMethod) (authData *p
 	)
 	switch v := authMethod.Method.(type) {
 	case *plugin.AuthMethod_Scanqrcode:
+		time.Sleep(time.Second * 3)
 		token, err = util.CheckAuthQrcode("baidupan", v.Scanqrcode.QrcodeImageParam)
 		if err != nil {
 			return nil, err
