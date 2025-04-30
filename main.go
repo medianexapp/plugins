@@ -100,7 +100,7 @@ func main() {
 			}
 			resp.Body.Close()
 		} else {
-			fmt.Println(pluginConfig.Name, "no upload")
+			slog.Info("not need upload", "name", pluginConfig.Name)
 		}
 
 	}
