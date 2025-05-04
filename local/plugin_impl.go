@@ -123,7 +123,6 @@ func (p *PluginImpl) GetDirEntry(req *plugin.GetDirEntryRequest) (*plugin.DirEnt
 		fileEntry.Size = uint64(fileInfo.Size())
 		stat, ok := fileInfo.Sys().(*syscall.Stat_t)
 		if ok {
-			fmt.Println(stat)
 			fileEntry.AccessedTime = uint64(stat.Atim.Sec)
 			fileEntry.ModifiedTime = uint64(stat.Mtim.Sec)
 			fileEntry.CreatedTime = uint64(stat.Ctim.Sec)

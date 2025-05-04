@@ -60,9 +60,9 @@ func main() {
 			os.Exit(1)
 		}
 		needUpload := false
-		if len(string(res)) != 0 {
-			fmt.Println(string(res), pluginConfig.Version)
-			serverVersion, err1 := version.NewVersion(string(res))
+		oldVersion := string(res)
+		if len(oldVersion) != 0 {
+			serverVersion, err1 := version.NewVersion(oldVersion)
 			localVersion, err2 := version.NewVersion(pluginConfig.Version)
 			if err1 != nil || err2 != nil {
 				slog.Error("get version failed", "err1", err1, "err2", err2)
@@ -94,9 +94,17 @@ func main() {
 			}
 
 			if resp.StatusCode != http.StatusOK {
-				slog.Info("upload failed", "name", pluginConfig.Name)
+				respData, err := io.ReadAll(resp.Body)
+				if err != nil {
+					slog.Error("read body failed", "err", err)
+					os.Exit(1)
+				}
+				slog.Error("request failed", "name", pluginConfig.Name, "err", string(respData))
 			} else {
-				slog.Info("upload success", "name", pluginConfig.Name)
+				if oldVersion == "" {
+					oldVersion = "-"
+				}
+				slog.Info("update version succes", "name", pluginConfig.Name, "oldVersion", oldVersion, "newVersion", pluginConfig.Version)
 			}
 			resp.Body.Close()
 		} else {
