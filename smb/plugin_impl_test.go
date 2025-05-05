@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/medianexapp/go-smb2"
-	// wasi_net "github.com/labulakalia/wazero_net/wasi/net"
 )
 
 func TestSmb(t *testing.T) {

@@ -3,9 +3,7 @@ module plugins
 go 1.24.0
 
 require (
-	github.com/BurntSushi/toml v1.4.0
 	github.com/boombuler/barcode v1.0.2
-	github.com/hashicorp/go-version v1.7.0
 	github.com/labulakalia/wazero_net v0.0.9-0.20250504090249-31e0ba862963
 	github.com/medianexapp/ftp v0.0.0-20250425113218-131712bc06d6
 	github.com/medianexapp/go-smb2 v0.0.0-20250425112922-92edacdefca5
