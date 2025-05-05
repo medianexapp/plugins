@@ -1,8 +1,10 @@
+
 function version_gt() { test "$(echo "$@" | tr " " "\n" | sort -V | head -n 1)" != "$1"; }
+
 function build() {
     version=`grep ^version $1/plugin.toml|awk -F'"' '{print $2}'`
     echo "$1 current version: "$version
-    remoteVersion=`curl -s  ${SERVER_ADDR}/api/get_plugin_version/local`
+    remoteVersion=`curl -s  ${SERVER_ADDR}/api/get_plugin_version/$1`
     echo "$1 remote version: "$remoteVersion
     needUpload=0
     if [[ -z $remoteVersion ]];then
@@ -25,10 +27,12 @@ function build() {
             -H "UploadKey: ${UPLOAD_KEY}" \
             --data-binary @"$1/dist/$1_$version.zip"
     fi
-
 }
+
+echo "{\"server_addr\": \"${SERVER_ADDR}\"}" > util/env.json
 
 for id in `ls -d */ | grep -v 'util' | grep -v smb|sed 's/\///g'`
 do
     build $id
 done
+echo "{}" > util/env.json
