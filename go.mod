@@ -6,11 +6,11 @@ require (
 	github.com/BurntSushi/toml v1.4.0
 	github.com/boombuler/barcode v1.0.2
 	github.com/hashicorp/go-version v1.7.0
-	github.com/labulakalia/wazero_net v0.0.9-0.20250427091815-5eb06e3a5aa6
+	github.com/labulakalia/wazero_net v0.0.9-0.20250504090249-31e0ba862963
 	github.com/medianexapp/ftp v0.0.0-20250425113218-131712bc06d6
 	github.com/medianexapp/go-smb2 v0.0.0-20250425112922-92edacdefca5
 	github.com/medianexapp/gowebdav v0.0.0-20250425112725-41a667437dfa
-	github.com/medianexapp/plugin_api v0.0.25-0.20250427101516-33dfbe36aab9
+	github.com/medianexapp/plugin_api v0.0.25-0.20250504094007-b5990b349012
 	github.com/medianexapp/sftp v1.13.10-0.20250425113120-4ffdd4c8163a
 	golang.org/x/crypto v0.37.0
 )
@@ -33,4 +33,5 @@ require (
 	github.com/tetratelabs/wazero v1.9.1-0.20250414143203-0dea5d7ee1de // indirect
 	golang.org/x/net v0.39.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect
+	golang.org/x/text v0.24.0 // indirect
 )

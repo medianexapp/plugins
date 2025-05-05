@@ -28,6 +28,8 @@ type pluginConfig struct {
 }
 
 func main() {
+	uploadKey := os.Getenv("UPLOAD_KEY")
+	serverAddr := os.Getenv("SERVER_ADDR")
 	dirs, err := os.ReadDir(".")
 	if err != nil {
 		slog.Error("read dir failed", "err", err)
@@ -49,7 +51,7 @@ func main() {
 			os.Exit(1)
 		}
 		pluginFile.Close()
-		resp, err := client.Get(os.Getenv("SERVER_ADDR") + "/api/get_plugin_version/" + pluginConfig.Id)
+		resp, err := client.Get(serverAddr + "/api/get_plugin_version/" + pluginConfig.Id)
 		if err != nil {
 			slog.Error("get version failed", "err", err)
 			os.Exit(1)
@@ -86,7 +88,7 @@ func main() {
 				slog.Error("new request failed", "err", err)
 				os.Exit(1)
 			}
-			req.Header.Set("UploadKey", os.Getenv("UPLOAD_KEY"))
+			req.Header.Set("UploadKey", uploadKey)
 			resp, err := client.Do(req)
 			if err != nil {
 				slog.Error("do request failed", "err", err)
