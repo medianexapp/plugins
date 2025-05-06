@@ -1,4 +1,3 @@
-
 function version_gt() { test "$(echo "$@" | tr " " "\n" | sort -V | head -n 1)" != "$1"; }
 
 function build() {
@@ -29,6 +28,14 @@ function build() {
     fi
 }
 
+if [[ -z $SERVER_ADDR ]];then
+    echo "vars SERVER_ADDR is empty"
+    exit 1
+fi
+if [[ -z $UPLOAD_KEY ]];then
+    echo "vars UPLOAD_KEY is empty"
+    exit 1
+fi
 echo "{\"server_addr\": \"${SERVER_ADDR}\"}" > util/env.json
 
 for id in `ls -d */ | grep -v 'util' | grep -v smb|sed 's/\///g'`
