@@ -60,3 +60,31 @@ type FileURL struct {
 		Url string `json:"url"`
 	} `json:"url"`
 }
+
+type SubtitleData struct {
+	List []Subtitle `json:"list"`
+}
+
+type Subtitle struct {
+	Sid      string `json:"sid"`
+	Language string `json:"language"`
+	Title    string `json:"title"`
+	URL      string `json:"url"`
+	Type     string `json:"type"`
+}
+
+type PlayVideoInfo struct {
+	FileId   string `json:"file_id"`
+	FileName string `json:"file_name"`
+	VideoURL []struct {
+		URL         string `json:"url"`
+		Definition  int    `json:"definition"`
+		DefinitionN int    `json:"definition_n"`
+		Title       string `json:"title"`
+	} `json:"video_url"`
+
+	// TODO add audio
+	// MultitrackList []struct {
+	// 	Title string `json:"title"`
+	// }
+}

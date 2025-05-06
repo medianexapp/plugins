@@ -3,5 +3,5 @@ Name = "Quark"
 desc = "quark plugin desc"
 icon = "quark.png"
 author = ["[]"]
-version = "v0.0.1"
-changelog = ["quark plugin init"]
+version = "v0.0.2"
+changelog = ["add rate limit"]

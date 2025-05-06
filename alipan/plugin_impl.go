@@ -21,6 +21,7 @@ import (
 
 	_ "github.com/labulakalia/wazero_net/wasi/http"
 	"github.com/medianexapp/plugin_api/plugin"
+	"github.com/medianexapp/plugin_api/ratelimit"
 )
 
 /*
@@ -35,11 +36,25 @@ type PluginImpl struct {
 	token                 *plugin.Token
 	userInfo              *UserInfoResponse
 	getDriverInfoResponse *UserGetDriverInfoResponse
+
+	ratelimit *ratelimit.RateLimit
 }
 
 func NewPluginImpl() *PluginImpl {
 	slog.SetLogLoggerLevel(slog.LevelDebug)
-	return &PluginImpl{}
+	limitConfigMap := map[string]ratelimit.LimitConfig{
+		"/adrive/v1.0/openFile/list": ratelimit.LimitConfig{
+			Limit:    40,
+			Duration: 10 * time.Second,
+		},
+		"/adrive/v1.0/openFile/getDownloadUrl": ratelimit.LimitConfig{
+			Limit:    1,
+			Duration: time.Second,
+		},
+	}
+	return &PluginImpl{
+		ratelimit: ratelimit.New(limitConfigMap),
+	}
 }
 
 // Id implements IPlugin.
@@ -48,6 +63,7 @@ func (p *PluginImpl) PluginId() (string, error) {
 }
 
 func (p *PluginImpl) send(method string, uri string, req, resp any) error {
+	_ = p.ratelimit.Wait(uri)
 	var body io.Reader
 	if req != nil {
 		data, err := json.Marshal(req)

@@ -19,6 +19,7 @@ import (
 	_ "github.com/labulakalia/wazero_net/wasi/http"
 	"github.com/medianexapp/plugin_api/httpclient"
 	"github.com/medianexapp/plugin_api/plugin"
+	"github.com/medianexapp/plugin_api/ratelimit"
 )
 
 /*
@@ -28,14 +29,16 @@ NOTE: net and http use package
 */
 
 type PluginImpl struct {
-	client   *httpclient.Client
-	token    *plugin.Token
-	userInfo *UserInfo
+	client    *httpclient.Client
+	token     *plugin.Token
+	userInfo  *UserInfo
+	ratelimit *ratelimit.RateLimit
 }
 
 func NewPluginImpl() *PluginImpl {
 	return &PluginImpl{
-		client: httpclient.NewClient(),
+		client:    httpclient.NewClient(),
+		ratelimit: ratelimit.New(map[string]ratelimit.LimitConfig{}),
 	}
 }
 

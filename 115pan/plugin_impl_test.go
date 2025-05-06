@@ -1,12 +1,14 @@
 package main
 
 import (
+	"encoding/json"
 	"image/png"
 	"os"
 	"testing"
 
 	"github.com/boombuler/barcode"
 	"github.com/boombuler/barcode/qr"
+	"github.com/medianexapp/plugin_api/plugin"
 )
 
 func TestGenerateQrcode(t *testing.T) {
@@ -27,12 +29,33 @@ func TestGenerateQrcode(t *testing.T) {
 
 func TestAuth(t *testing.T) {
 	pluginImpl := NewPluginImpl()
-	auth, err := pluginImpl.GetAuth()
+	authData := `{}`
+	token := &plugin.Token{}
+	json.Unmarshal([]byte(authData), token)
+	// t.Log(token)
+	tokenData, _ := token.MarshalVT()
+	err := pluginImpl.CheckAuthData(tokenData)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, method := range auth.AuthMethods {
-		t.Log(method)
+	dirEntry, err := pluginImpl.GetDirEntry(&plugin.GetDirEntryRequest{
+		Path:     "/",
+		Page:     1,
+		PageSize: 10,
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
-
+	for _, fileEntry := range dirEntry.FileEntries {
+		if fileEntry.Name == "test.mkv" {
+			fileResource, err := pluginImpl.GetFileResource(&plugin.GetFileResourceRequest{
+				FilePath:  "/test.mkv",
+				FileEntry: fileEntry,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Logf("fileRe %+v \n", fileResource)
+		}
+	}
 }

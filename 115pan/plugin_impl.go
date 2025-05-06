@@ -20,6 +20,7 @@ import (
 	"github.com/boombuler/barcode/qr"
 	"github.com/medianexapp/plugin_api/httpclient"
 	"github.com/medianexapp/plugin_api/plugin"
+	"github.com/medianexapp/plugin_api/ratelimit"
 
 	_ "github.com/labulakalia/wazero_net/wasi/http"
 )
@@ -34,15 +35,34 @@ type PluginImpl struct {
 	token    *plugin.Token
 	userInfo *UserInfo
 
-	client *httpclient.Client
+	client    *httpclient.Client
+	ratelimit *ratelimit.RateLimit
 }
 
 func NewPluginImpl() *PluginImpl {
 	slog.SetLogLoggerLevel(slog.LevelDebug)
 	client := httpclient.NewClient()
-	client.Client.Timeout = time.Minute
+	limitConfigMap := map[string]ratelimit.LimitConfig{
+		"/open/ufile/downurl": ratelimit.LimitConfig{
+			Limit:    1,
+			Duration: 3 * time.Second,
+		},
+		"/open/video/subtitle": ratelimit.LimitConfig{
+			Limit:    1,
+			Duration: 3 * time.Second,
+		},
+		"/open/video/play": ratelimit.LimitConfig{
+			Limit:    1,
+			Duration: 3 * time.Second,
+		},
+		"/open/ufile/files": ratelimit.LimitConfig{
+			Limit:    1,
+			Duration: 1 * time.Second,
+		},
+	}
 	return &PluginImpl{
-		client: httpclient.NewClient(),
+		client:    client,
+		ratelimit: ratelimit.New(limitConfigMap),
 	}
 }
 
@@ -254,6 +274,7 @@ func (p *PluginImpl) GetDirEntry(req *plugin.GetDirEntryRequest) (*plugin.DirEnt
 	u.Add("offset", fmt.Sprint((req.Page-1)*req.PageSize))
 	u.Add("limit", fmt.Sprint(req.PageSize))
 	u.Add("order", "file_name")
+	p.ratelimit.Wait("/open/ufile/files")
 	err := p.send(http.MethodGet, "/open/ufile/files?"+u.Encode(), nil, resp)
 	if err != nil {
 		return nil, err
@@ -296,6 +317,9 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 	if req.FileEntry == nil || req.FileEntry.RawData == nil {
 		return nil, fmt.Errorf("invalid path %s", req.FilePath)
 	}
+
+	fileResource := &plugin.FileResource{
+		FileResourceData: []*plugin.FileResource_FileResourceData{}}
 	fileEntry := &FileEntry{}
 	err := json.Unmarshal(req.FileEntry.RawData, fileEntry)
 	if err != nil {
@@ -308,39 +332,98 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 	resp := Response{
 		Data: &respData,
 	}
+	p.ratelimit.Wait("/open/ufile/downurl")
 	err = p.send(http.MethodPost, "/open/ufile/downurl", reqURL, &resp)
 	if err != nil {
 		return nil, err
 	}
-	if resp.State == false {
-		slog.Error("get file failed", "err", err)
-		return nil, errors.New(resp.Message)
-	}
-	fileURL, ok := respData[fileEntry.Fid]
-	if !ok {
-		return nil, fmt.Errorf("file not found")
-	}
-	// url.ParseQuery(query string)
-	uu, err := url.Parse(fileURL.Url.Url)
-	if err != nil {
-		return nil, err
-	}
-	expireTime, err := strconv.ParseUint(uu.Query().Get("t"), 10, 0)
-	if err != nil {
-		return nil, err
-	}
-	return &plugin.FileResource{
-		FileResourceData: []*plugin.FileResource_FileResourceData{
-			{
-				Url:        fileURL.Url.Url,
-				Resolution: plugin.FileResource_Original,
-				ExpireTime: expireTime,
+	if resp.State == true {
+		fileURL, ok := respData[fileEntry.Fid]
+		if ok {
+			uu, err := url.Parse(fileURL.Url.Url)
+			if err != nil {
+				return nil, err
+			}
+			expireTime, err := strconv.ParseUint(uu.Query().Get("t"), 10, 0)
+			if err != nil {
+				return nil, err
+			}
+			fileResource.FileResourceData = append(fileResource.FileResourceData, &plugin.FileResource_FileResourceData{
+				Url:          fileURL.Url.Url,
+				Resolution:   plugin.FileResource_Original,
+				ResourceType: plugin.FileResource_Video,
+				ExpireTime:   expireTime,
 				Header: map[string]string{
 					"User-Agent": httpclient.GetDefaultUserAgent(),
 				},
+			})
+		}
+	} else {
+		slog.Error("get down file failed", "msg", resp.Message)
+	}
+
+	subtitleData := &SubtitleData{
+		List: []Subtitle{},
+	}
+	resp = Response{
+		Data: &subtitleData,
+	}
+	p.ratelimit.Wait("/open/video/subtitle")
+	err = p.send(http.MethodGet, "/open/video/subtitle?"+reqURL.Encode(), nil, &resp)
+	if err != nil {
+		return nil, err
+	}
+	for _, subtitle := range subtitleData.List {
+		fileResource.FileResourceData = append(fileResource.FileResourceData, &plugin.FileResource_FileResourceData{
+			Url:          subtitle.URL,
+			ResourceType: plugin.FileResource_Subtitle,
+			Title:        subtitle.Title,
+			Header: map[string]string{
+				"User-Agent": httpclient.GetDefaultUserAgent(),
 			},
-		},
-	}, nil
+		})
+	}
+
+	playVideoInfo := PlayVideoInfo{}
+	resp = Response{
+		Data: &playVideoInfo,
+	}
+	// get video play address
+	p.ratelimit.Wait("/open/video/play")
+	err = p.send(http.MethodGet, "/open/video/play?"+reqURL.Encode(), nil, &resp)
+	if err != nil {
+		return nil, err
+	}
+	if resp.State == true {
+		for _, playVideoInfo := range playVideoInfo.VideoURL {
+			data := &plugin.FileResource_FileResourceData{
+				Url:          playVideoInfo.URL,
+				ResourceType: plugin.FileResource_Video,
+				Title:        playVideoInfo.Title,
+				Header: map[string]string{
+					"User-Agent": httpclient.GetDefaultUserAgent(),
+				},
+			}
+			if playVideoInfo.DefinitionN == 1 {
+				data.Resolution = plugin.FileResource_SD
+			} else if playVideoInfo.DefinitionN == 2 {
+				data.Resolution = plugin.FileResource_LD
+			} else if playVideoInfo.DefinitionN == 3 {
+				data.Resolution = plugin.FileResource_HD
+			} else if playVideoInfo.DefinitionN == 4 {
+				data.Resolution = plugin.FileResource_FHD
+			} else if playVideoInfo.DefinitionN == 4 {
+				data.Resolution = plugin.FileResource_UHD
+			} else if playVideoInfo.DefinitionN == 5 {
+				data.Resolution = plugin.FileResource_Original
+			}
+			fileResource.FileResourceData = append(fileResource.FileResourceData, data)
+		}
+	} else {
+		slog.Error("get play video info failed", "msg", resp.Message)
+	}
+
+	return fileResource, nil
 }
 
 func (p *PluginImpl) send(method string, uri string, req, resp any) error {
@@ -366,11 +449,12 @@ func (p *PluginImpl) send(method string, uri string, req, resp any) error {
 	if err != nil {
 		return err
 	}
+
 	bodyData, err := io.ReadAll(httpResp.Body)
 	if err != nil {
 		return err
 	}
-	slog.Debug("get request resp", "uri", uri, "req", req, "status_code", httpResp.StatusCode, "resp", string(bodyData))
+	slog.Debug("get request resp", "uri", uri, "req", req, "status_code", httpResp.StatusCode, "header", httpResp.Header, "resp", string(bodyData))
 	defer httpResp.Body.Close()
 
 	err = json.Unmarshal(bodyData, resp)

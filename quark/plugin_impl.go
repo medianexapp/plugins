@@ -15,7 +15,6 @@ import (
 	_ "github.com/labulakalia/wazero_net/wasi/http" // if you need http import this
 	"github.com/medianexapp/plugin_api/httpclient"
 	"github.com/medianexapp/plugin_api/plugin"
-	// _ "github.com/labulakalia/wazero_net/wasi/net"  // if you need net.Conn import this
 )
 
 const (
