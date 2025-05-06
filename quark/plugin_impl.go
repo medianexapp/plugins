@@ -11,10 +11,12 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	_ "github.com/labulakalia/wazero_net/wasi/http" // if you need http import this
 	"github.com/medianexapp/plugin_api/httpclient"
 	"github.com/medianexapp/plugin_api/plugin"
+	"github.com/medianexapp/plugin_api/ratelimit"
 )
 
 const (
@@ -25,14 +27,22 @@ const (
 )
 
 type PluginImpl struct {
-	cookie string
-	client *httpclient.Client
+	cookie    string
+	client    *httpclient.Client
+	ratelimit *ratelimit.RateLimit
 }
 
 func NewPluginImpl() *PluginImpl {
 	slog.SetLogLoggerLevel(slog.LevelDebug)
+	limitConfigMap := map[string]ratelimit.LimitConfig{
+		"": ratelimit.LimitConfig{
+			Limit:    1,
+			Duration: time.Second,
+		},
+	}
 	return &PluginImpl{
-		client: httpclient.NewClient(httpclient.WithUserAgent(userAgent)),
+		client:    httpclient.NewClient(httpclient.WithUserAgent(userAgent)),
+		ratelimit: ratelimit.New(limitConfigMap),
 	}
 }
 
@@ -254,6 +264,7 @@ func (p *PluginImpl) request(uri string, method string, u url.Values, reqData, r
 	if u == nil {
 		u = url.Values{}
 	}
+	p.ratelimit.Wait("")
 	u.Add("pr", pr)
 	u.Add("fr", "pc")
 	var body io.Reader
