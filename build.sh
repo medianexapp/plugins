@@ -38,7 +38,7 @@ if [[ -z $UPLOAD_KEY ]];then
 fi
 echo "{\"server_addr\": \"${SERVER_ADDR}\"}" > util/env.json
 
-for id in `ls -d */ | grep -v 'util' | grep -v smb|sed 's/\///g'`
+for id in `ls -d */ | grep -v 'util' | grep -v smb | grep -v sftp |sed 's/\///g'`
 do
     build $id
 done
