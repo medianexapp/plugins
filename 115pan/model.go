@@ -16,12 +16,12 @@ type QrResponse struct {
 }
 
 type Response struct {
-	State   any         `json:"state"`
-	Code    int         `json:"code"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data"`
-	Error   string      `json:"error"`
-	Errno   int         `json:"errno"`
+	State   any    `json:"state"`
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Data    any    `json:"data"`
+	Error   string `json:"error"`
+	Errno   int    `json:"errno"`
 }
 
 type AuthDeviceCodeData struct {
@@ -44,8 +44,8 @@ type FileEntry struct {
 	Pc  string `json:"pc"`  // file pick code
 	// Isp string `json:"isp"` // passwd
 
-	Upt  int    `json:"upt"`  // 修改时间
-	Uppt int    `json:"uppt"` // 上传时间
+	Upt  uint64 `json:"upt"`  // 修改时间
+	Uppt uint64 `json:"uppt"` // 上传时间
 	Fs   uint64 `json:"fs"`   // file size
 
 	Fta string `json:"fta"` // 文件状态 0/2 未上传完成，1 已上传完成
@@ -78,8 +78,8 @@ type PlayVideoInfo struct {
 	FileName string `json:"file_name"`
 	VideoURL []struct {
 		URL         string `json:"url"`
-		Definition  int    `json:"definition"`
-		DefinitionN int    `json:"definition_n"`
+		Definition  uint64 `json:"definition"`
+		DefinitionN uint64 `json:"definition_n"`
 		Title       string `json:"title"`
 	} `json:"video_url"`
 
