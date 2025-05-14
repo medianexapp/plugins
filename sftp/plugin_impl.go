@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/netip"
+	"os"
 	"strings"
 	"time"
 
@@ -94,25 +95,12 @@ func (p *PluginImpl) CheckAuthMethod(authMethod *plugin.AuthMethod) (authData *p
 	return authData, nil
 }
 
-func (p *PluginImpl) unmarshalFormData(formData *plugin.Formdata) {
-	p.sftpAuth.Addr.StringValue = formData.FormItems[0].Value.(*plugin.Formdata_FormItem_StringValue).StringValue
-	p.sftpAuth.User.StringValue = formData.FormItems[1].Value.(*plugin.Formdata_FormItem_StringValue).StringValue
-	p.sftpAuth.Password.ObscureStringValue = formData.FormItems[2].Value.(*plugin.Formdata_FormItem_ObscureStringValue).ObscureStringValue
-
-}
-
-// InitAuth implements IPlugin.
-func (p *PluginImpl) CheckAuthData(AuthDataBytes []byte) error {
-	slog.Debug("start check auth data")
-	authMethod := &plugin.AuthMethod{}
-	err := authMethod.UnmarshalVT(AuthDataBytes)
-	if err != nil {
-		return err
+func (p *PluginImpl) connectSftp() error {
+	if p.sftpClient != nil {
+		p.sftpClient.Close()
 	}
-	formData := authMethod.Method.(*plugin.AuthMethod_Formdata)
-	p.unmarshalFormData(formData.Formdata)
 	addr := p.sftpAuth.Addr.StringValue.Value
-	_, err = netip.ParseAddrPort(addr)
+	_, err := netip.ParseAddrPort(addr)
 	if err != nil {
 		addr = fmt.Sprintf("%s:%d", strings.TrimRight(addr, ":"), 22)
 	}
@@ -142,6 +130,30 @@ func (p *PluginImpl) CheckAuthData(AuthDataBytes []byte) error {
 		return err
 	}
 	p.sftpClient = sftpClient
+	return nil
+}
+
+func (p *PluginImpl) unmarshalFormData(formData *plugin.Formdata) {
+	p.sftpAuth.Addr.StringValue = formData.FormItems[0].Value.(*plugin.Formdata_FormItem_StringValue).StringValue
+	p.sftpAuth.User.StringValue = formData.FormItems[1].Value.(*plugin.Formdata_FormItem_StringValue).StringValue
+	p.sftpAuth.Password.ObscureStringValue = formData.FormItems[2].Value.(*plugin.Formdata_FormItem_ObscureStringValue).ObscureStringValue
+
+}
+
+// InitAuth implements IPlugin.
+func (p *PluginImpl) CheckAuthData(AuthDataBytes []byte) error {
+	slog.Debug("start check auth data")
+	authMethod := &plugin.AuthMethod{}
+	err := authMethod.UnmarshalVT(AuthDataBytes)
+	if err != nil {
+		return err
+	}
+	formData := authMethod.Method.(*plugin.AuthMethod_Formdata)
+	p.unmarshalFormData(formData.Formdata)
+	err = p.connectSftp()
+	if err != nil {
+		return err
+	}
 	slog.Debug("check auth data success")
 	return nil
 }
@@ -157,11 +169,20 @@ func (p *PluginImpl) GetDirEntry(req *plugin.GetDirEntryRequest) (*plugin.DirEnt
 	dirPath := req.Path
 	page := req.Page
 	pageSize := req.PageSize
-	entries, err := p.sftpClient.ReadDir(dirPath)
-	if err != nil {
-		slog.Error("sftp client failed", "err", err)
-		return nil, err
+	var (
+		entries []os.FileInfo
+		err     error
+	)
+	for range 3 {
+		entries, err = p.sftpClient.ReadDir(dirPath)
+		if err != nil {
+			slog.Error("sftp client read dir failed", "err", err)
+			p.connectSftp()
+		} else {
+			break
+		}
 	}
+
 	dirEntry := &plugin.DirEntry{
 		FileEntries: make([]*plugin.FileEntry, 0, len(entries)),
 	}
@@ -202,15 +223,25 @@ func (p *PluginImpl) GetDirEntry(req *plugin.GetDirEntryRequest) (*plugin.DirEnt
 // GetFileResource implements IPlugin.
 func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugin.FileResource, error) {
 	// sftp://[user[:password]@]server[:port]/path/to/remote/resource.mpeg
-	_, err := p.sftpClient.Stat(req.FilePath)
+	var err error
+	for range 3 {
+		_, err = p.sftpClient.Stat(req.FilePath)
+		if err != nil {
+			slog.Error("sftp stat failed", "err", err)
+			p.connectSftp()
+		} else {
+			break
+		}
+	}
 	if err != nil {
 		return nil, err
 	}
+
 	userPass := ""
 	if p.sftpAuth.User.StringValue.Value != "" && p.sftpAuth.Password.ObscureStringValue.Value != "" {
 		userPass = fmt.Sprintf("%s:%s@", p.sftpAuth.User.StringValue.Value, p.sftpAuth.Password.ObscureStringValue.Value)
 	}
-	fileUrl := fmt.Sprintf("sftp://%s%s%s", userPass, p.sftpAuth.Addr.StringValue.Value, req.FileEntry)
+	fileUrl := fmt.Sprintf("sftp://%s%s%s", userPass, p.sftpAuth.Addr.StringValue.Value, req.FilePath)
 	return &plugin.FileResource{
 		FileResourceData: []*plugin.FileResource_FileResourceData{
 			{

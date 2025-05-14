@@ -118,20 +118,23 @@ func (p *PluginImpl) unmarshalFormData(formData *plugin.Formdata) {
 
 }
 
-// InitAuth implements IPlugin.
-func (p *PluginImpl) CheckAuthData(AuthDataBytes []byte) error {
-	authMethod := &plugin.AuthMethod{}
-	err := authMethod.UnmarshalVT(AuthDataBytes)
-	if err != nil {
-		return err
+func (p *PluginImpl) connectFtp() error {
+	if p.ftpConn != nil {
+		p.ftpConn.Logout()
 	}
-	formData := authMethod.Method.(*plugin.AuthMethod_Formdata)
-	p.unmarshalFormData(formData.Formdata)
 	addr := p.ftpAuth.Addr.StringValue.Value
-	_, err = netip.ParseAddrPort(addr)
+	_, err := netip.ParseAddrPort(addr)
 	if err != nil {
 		addr = fmt.Sprintf("%s:%d", strings.TrimRight(addr, ":"), 21)
 	}
+
+	user := p.ftpAuth.User.StringValue.Value
+	password := p.ftpAuth.Password.ObscureStringValue.Value
+	if user == "" && password == "" {
+		password = "anonymous"
+		user = "anonymous"
+	}
+
 	ftpConn, err := ftp.Dial(addr, ftp.DialWithDialFunc(func(network, address string) (net.Conn, error) {
 		conn, err := wasi_net.Dial(network, address)
 		if err != nil {
@@ -143,19 +146,29 @@ func (p *PluginImpl) CheckAuthData(AuthDataBytes []byte) error {
 	if err != nil {
 		return err
 	}
-	user := p.ftpAuth.User.StringValue.Value
-	password := p.ftpAuth.Password.ObscureStringValue.Value
-	if user == "" && password == "" {
-		password = "anonymous"
-		user = "anonymous"
-	}
 	err = ftpConn.Login(user, password)
 	if err != nil {
 		slog.Error("ftp login failed", "addr", addr)
 		return err
 	}
 	p.ftpConn = ftpConn
-	slog.Info("ftp login success", "addr", addr)
+	return err
+}
+
+// InitAuth implements IPlugin.
+func (p *PluginImpl) CheckAuthData(AuthDataBytes []byte) error {
+	authMethod := &plugin.AuthMethod{}
+	err := authMethod.UnmarshalVT(AuthDataBytes)
+	if err != nil {
+		return err
+	}
+	formData := authMethod.Method.(*plugin.AuthMethod_Formdata)
+	p.unmarshalFormData(formData.Formdata)
+	err = p.connectFtp()
+	if err != nil {
+		return err
+	}
+	slog.Info("ftp login success", "addr", p.ftpAuth.Addr.StringValue.Value)
 	return nil
 }
 
@@ -170,10 +183,24 @@ func (p *PluginImpl) GetDirEntry(req *plugin.GetDirEntryRequest) (*plugin.DirEnt
 	dirPath := req.Path
 	page := req.Page
 	pageSize := req.PageSize
-	entries, err := p.ftpConn.List(dirPath)
-	if err != nil {
-		return nil, err
+
+	var (
+		entries []*ftp.Entry
+		err     error
+	)
+	for range 3 {
+		entries, err = p.ftpConn.List(dirPath)
+		if err != nil {
+			slog.Error("list failed", "err", err)
+			err = p.connectFtp()
+			if err != nil {
+				slog.Error("reconnect ftp failed", "err", err)
+			}
+		} else {
+			break
+		}
 	}
+
 	dirEntry := &plugin.DirEntry{
 		FileEntries: make([]*plugin.FileEntry, 0, pageSize),
 	}
@@ -214,10 +241,26 @@ func (p *PluginImpl) GetDirEntry(req *plugin.GetDirEntryRequest) (*plugin.DirEnt
 // GetFileResource implements IPlugin.
 func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugin.FileResource, error) {
 	// url path ftp://[user[:password]@]server[:port]/path/to/remote/resource.mpeg
-	_, err := p.ftpConn.GetEntry(req.FilePath)
+	var (
+		err error
+	)
+	for range 3 {
+		_, err = p.ftpConn.GetEntry(req.FilePath)
+		if err != nil {
+			slog.Error("list failed", "err", err)
+			err = p.connectFtp()
+			if err != nil {
+				slog.Error("reconnect ftp failed", "err", err)
+
+			}
+		} else {
+			break
+		}
+	}
 	if err != nil {
 		return nil, err
 	}
+
 	userPass := ""
 	if p.ftpAuth.User.StringValue.Value != "" || p.ftpAuth.Password.ObscureStringValue.Value != "" {
 		userPass = fmt.Sprintf("%s:%s@", p.ftpAuth.User.StringValue.Value, p.ftpAuth.Password.ObscureStringValue.Value)
