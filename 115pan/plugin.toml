@@ -3,5 +3,5 @@ name = "115Pan"
 desc = "115pan plugin"
 icon = "115pan.png"
 author = ["labulakalia(labulakalia@gmail.com)"]
-version = "v0.0.2"
-changelog = ["add rate limit"]
+version = "v0.0.3"
+changelog = ["fix file entry size type to uint64"]

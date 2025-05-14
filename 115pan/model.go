@@ -44,9 +44,9 @@ type FileEntry struct {
 	Pc  string `json:"pc"`  // file pick code
 	// Isp string `json:"isp"` // passwd
 
-	Upt  int `json:"upt"`  // 修改时间
-	Uppt int `json:"uppt"` // 上传时间
-	Fs   int `json:"fs"`   // file size
+	Upt  int    `json:"upt"`  // 修改时间
+	Uppt int    `json:"uppt"` // 上传时间
+	Fs   uint64 `json:"fs"`   // file size
 
 	Fta string `json:"fta"` // 文件状态 0/2 未上传完成，1 已上传完成
 }
