@@ -8,7 +8,7 @@ require (
 	github.com/medianexapp/ftp v0.0.0-20250425113218-131712bc06d6
 	github.com/medianexapp/go-smb2 v0.0.0-20250425112922-92edacdefca5
 	github.com/medianexapp/gowebdav v0.0.0-20250425112725-41a667437dfa
-	github.com/medianexapp/plugin_api v0.0.25-0.20250506040954-94fb0f3e9635
+	github.com/medianexapp/plugin_api v0.0.25-0.20250520073735-51aef43e6d55
 	github.com/medianexapp/sftp v1.13.10-0.20250425113120-4ffdd4c8163a
 	golang.org/x/crypto v0.37.0
 )

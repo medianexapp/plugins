@@ -3,5 +3,5 @@ name = "Local"
 desc = "local driver plugin"
 icon = "local.png"
 author = ["labulakalia(labulakalia@gmail.com)"]
-version = "v0.0.1"
-changelog = ["local driver plugin init"]
+version = "v0.0.2"
+changelog = ["1.fix read dir failed on windows"]

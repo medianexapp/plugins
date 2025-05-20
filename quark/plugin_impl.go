@@ -195,7 +195,6 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 	if err != nil {
 		return nil, err
 	}
-
 	if len(respData) == 1 {
 		expireTime, err := getExpires(respData[0].DownloadUrl)
 		if err != nil {
@@ -210,10 +209,13 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 					"Referer":    referer,
 					"User-Agent": userAgent,
 				},
-				ExpireTime: expireTime,
+				ExpireTime:         expireTime,
+				Size:               req.FileEntry.Size,
+				Proxy:              true,
+				ProxyChunkParallel: 3,
+				ProxyChunkSize:     1024 * 1024 * 5,
 			})
 		}
-
 	}
 	// 获取播放链接
 	uri := "/file/v2/play"
@@ -275,16 +277,33 @@ func (p *PluginImpl) request(uri string, method string, u url.Values, reqData, r
 		}
 		body = bytes.NewBuffer(data)
 	}
-	req, err := http.NewRequest(method, fmt.Sprintf("%s/%s?%s", api, uri, u.Encode()), body)
+	req, err := http.NewRequest(method, fmt.Sprintf("%s%s?%s", api, uri, u.Encode()), body)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Cookie", p.cookie)
 	req.Header.Set("Accept", "application/json, text/plain, */*")
 	req.Header.Set("Referer", referer)
-	resp, err := p.client.Do(req)
+	req.Header.Set("User-Agent", userAgent)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
+	}
+	for _, cookie := range resp.Cookies() {
+		if cookie.Name == "__puus" {
+			h := http.Header{}
+			h.Add("Cookie", p.cookie)
+			cookieStrs := []string{}
+			r := http.Request{Header: h}
+			for _, oldCookie := range r.Cookies() {
+				oldCookieStr := oldCookie.String()
+				if oldCookie.Name == "__puus" {
+					oldCookieStr = cookie.String()
+				}
+				cookieStrs = append(cookieStrs, oldCookieStr)
+			}
+			p.cookie = strings.Join(cookieStrs, ";")
+		}
 	}
 	respBytes, err := io.ReadAll(resp.Body)
 	if err != nil {

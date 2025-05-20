@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/labulakalia/wazero_net/util"
@@ -22,6 +23,7 @@ NOTE: net and http use package
 
 type PluginImpl struct {
 	localpath *plugin.Formdata_FormItem_DirPathValue
+	uPath     string
 }
 
 func NewPluginImpl() *PluginImpl {
@@ -76,6 +78,10 @@ func (p *PluginImpl) CheckAuthData(authData []byte) error {
 	fmt.Println("check auth data", authMethod.Method.(*plugin.AuthMethod_Formdata))
 	dirPath := authMethod.Method.(*plugin.AuthMethod_Formdata).Formdata.FormItems[0].Value.(*plugin.Formdata_FormItem_DirPathValue)
 	p.localpath.DirPathValue = dirPath.DirPathValue
+	p.uPath = dirPath.DirPathValue.Value
+	if strings.Contains(p.uPath, ":") {
+		p.uPath = `/` + strings.ReplaceAll(strings.ReplaceAll(dirPath.DirPathValue.Value, ":", ""), `\`, "/")
+	}
 	return nil
 }
 
@@ -89,7 +95,8 @@ func (p *PluginImpl) GetDirEntry(req *plugin.GetDirEntryRequest) (*plugin.DirEnt
 	dirPath := req.Path
 	page := req.Page
 	pageSize := req.PageSize
-	entries, err := os.ReadDir(filepath.Join(p.localpath.DirPathValue.Value, dirPath))
+
+	entries, err := os.ReadDir(filepath.Join(p.uPath, dirPath))
 	if err != nil {
 		return nil, err
 	}
@@ -134,15 +141,18 @@ func (p *PluginImpl) GetDirEntry(req *plugin.GetDirEntryRequest) (*plugin.DirEnt
 
 // GetFileResource implements IPlugin.
 func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugin.FileResource, error) {
-	filePath := filepath.Join(p.localpath.DirPathValue.Value, req.FilePath)
-	_, err := os.Stat(filePath)
+	statPath := filepath.Join(p.uPath, req.FilePath)
+	if strings.Contains(statPath, `\`) {
+		statPath = strings.ReplaceAll(statPath, `\`, `/`)
+	}
+	_, err := os.Stat(statPath)
 	if err != nil {
 		return nil, err
 	}
 	return &plugin.FileResource{
 		FileResourceData: []*plugin.FileResource_FileResourceData{
 			{
-				Url:          fmt.Sprintf("file:///%s", filePath),
+				Url:          fmt.Sprintf("file:///%s", filepath.Join(p.localpath.DirPathValue.Value, req.FilePath)),
 				ResourceType: plugin.FileResource_Video,
 				Resolution:   plugin.FileResource_Original,
 			},

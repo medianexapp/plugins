@@ -1,0 +1,7 @@
+id = "alist"
+Name = "Alist"
+desc = "support alist"
+icon = "alist.png"
+author = ["labulakalia@gmail.com"]
+version = "v0.0.1"
+changelog = ["alist plugin init"]

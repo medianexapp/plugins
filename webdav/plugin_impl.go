@@ -106,7 +106,8 @@ func (p *PluginImpl) CheckAuthData(authData []byte) error {
 		slog.Error("connect failed", "err", err)
 		return err
 	}
-	return nil
+	_, err = p.client.Stat("/")
+	return err
 }
 
 // AuthId implements IPlugin.
@@ -160,6 +161,10 @@ func (p *PluginImpl) GetDirEntry(req *plugin.GetDirEntryRequest) (*plugin.DirEnt
 
 // GetFileResource implements IPlugin.
 func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugin.FileResource, error) {
+	_, err := p.client.Stat(req.FilePath)
+	if err != nil {
+		return nil, err
+	}
 	pathReq, err := p.client.GetPathRequest(req.FilePath)
 	if err != nil {
 		return nil, err
