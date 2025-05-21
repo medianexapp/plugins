@@ -82,6 +82,10 @@ func (p *PluginImpl) CheckAuthData(authData []byte) error {
 	if strings.Contains(p.uPath, ":") {
 		p.uPath = `/` + strings.ReplaceAll(strings.ReplaceAll(dirPath.DirPathValue.Value, ":", ""), `\`, "/")
 	}
+	_, err = os.Stat(p.uPath)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
