@@ -3,5 +3,5 @@ Name = "Alist"
 desc = "support alist"
 icon = "alist.png"
 author = ["labulakalia@gmail.com"]
-version = "v0.0.1"
-changelog = ["alist plugin init"]
+version = "v0.0.2"
+changelog = ["fix list dir failed"]

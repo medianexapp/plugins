@@ -19,9 +19,8 @@ import (
 )
 
 type PluginImpl struct {
-	authData  *AuthData
-	client    *httpclient.Client
-	authToken string
+	authData *AuthData
+	client   *httpclient.Client
 }
 
 type AuthData struct {
@@ -29,6 +28,7 @@ type AuthData struct {
 	Username     string
 	Password     string
 	TokenExpired int64
+	Token        string
 }
 
 func NewPluginImpl() *PluginImpl {
@@ -90,14 +90,14 @@ func (p *PluginImpl) request(method string, uri string, reqData, respData any) e
 		fmt.Println(string(data))
 		body = bytes.NewReader(data)
 	}
-	slog.Debug("alist request", "req", reqData)
+	slog.Debug("alist request", "req", reqData, "url", fmt.Sprintf("%s%s", p.authData.Addr, uri))
 	req, err := http.NewRequest(method, fmt.Sprintf("%s%s", p.authData.Addr, uri), body)
 	if err != nil {
 		return err
 	}
 
-	if p.authToken != "" {
-		req.Header.Set("Authorization", p.authToken)
+	if p.authData.Token != "" {
+		req.Header.Set("Authorization", p.authData.Token)
 	}
 	req.Header.Add("Content-Type", "application/json")
 	httpResp, err := p.client.Do(req)
@@ -145,8 +145,13 @@ func (p *PluginImpl) CheckAuthMethod(authMethod *plugin.AuthMethod) (*plugin.Aut
 	if err != nil {
 		return nil, err
 	}
+	p.authData.Token = authResp.Token
+	authData, err := json.Marshal(p.authData)
+	if err != nil {
+		return nil, err
+	}
 	return &plugin.AuthData{
-		AuthDataBytes:       []byte(authResp.Token),
+		AuthDataBytes:       authData,
 		AuthDataExpiredTime: uint64(time.Hour * time.Duration(p.authData.TokenExpired)),
 	}, nil
 }
@@ -155,8 +160,11 @@ func (p *PluginImpl) CheckAuthMethod(authMethod *plugin.AuthMethod) (*plugin.Aut
 // you must store auth data to *PluginImpl
 func (p *PluginImpl) CheckAuthData(authDataBytes []byte) error {
 	slog.Debug("CheckAuthData", "authDataBytes", authDataBytes)
-	p.authToken = string(authDataBytes)
-	err := p.request(http.MethodGet, "/api/me", nil, nil)
+	err := json.Unmarshal(authDataBytes, p.authData)
+	if err != nil {
+		return err
+	}
+	err = p.request(http.MethodGet, "/api/me", nil, nil)
 	if err != nil {
 		return err
 	}
@@ -178,7 +186,7 @@ func (p *PluginImpl) PluginAuthId() (string, error) {
 // save your driver file raw data to FileEntry.RawData,you can get it after GetDirEntry and GetFileResource request
 // default page_size if 100,if this not for you,change is on DirEntry.PageSize,will use new PageSize for next request
 func (p *PluginImpl) GetDirEntry(req *plugin.GetDirEntryRequest) (*plugin.DirEntry, error) {
-	slog.Debug("GetDirEntry", "req", req.FileEntry)
+	slog.Debug("GetDirEntry", "req", req)
 	fsResp := &FsListResp{
 		Contents: []Content{},
 	}
