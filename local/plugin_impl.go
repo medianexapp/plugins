@@ -156,7 +156,7 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 	return &plugin.FileResource{
 		FileResourceData: []*plugin.FileResource_FileResourceData{
 			{
-				Url:          fmt.Sprintf("file:///%s", filepath.Join(p.localpath.DirPathValue.Value, req.FilePath)),
+				Url:          fmt.Sprintf("file://%s", filepath.Join(p.localpath.DirPathValue.Value, req.FilePath)),
 				ResourceType: plugin.FileResource_Video,
 				Resolution:   plugin.FileResource_Original,
 			},

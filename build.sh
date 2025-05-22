@@ -23,7 +23,7 @@ function build() {
         make -C $1
         curl -X POST "${SERVER_ADDR}/api/upload_plugin" \
             -H 'Content-Type: application/zip' \
-            -H "UploadKey: ${UPLOAD_KEY}" \
+            -H "SecretKey: ${SECRET_KEY}" \
             --data-binary @"$1/dist/$1_$version.zip"
     fi
 }
@@ -32,8 +32,8 @@ if [[ -z $SERVER_ADDR ]];then
     echo "vars SERVER_ADDR is empty"
     exit 1
 fi
-if [[ -z $UPLOAD_KEY ]];then
-    echo "vars UPLOAD_KEY is empty"
+if [[ -z $SECRET_KEY ]];then
+    echo "vars SECRET_KEY is empty"
     exit 1
 fi
 echo "{\"server_addr\": \"${SERVER_ADDR}\"}" > util/env.json
