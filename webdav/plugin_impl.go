@@ -100,7 +100,7 @@ func (p *PluginImpl) CheckAuthData(authData []byte) error {
 
 	slog.Debug("webdav connect", "addr", p.webDavAuth.Addr.StringValue.Value, "user", p.webDavAuth.User.StringValue.Value, "passwd", p.webDavAuth.Password.ObscureStringValue.Value)
 	p.client = gowebdav.NewClient(p.webDavAuth.Addr.StringValue.Value, p.webDavAuth.User.StringValue.Value, p.webDavAuth.Password.ObscureStringValue.Value)
-	p.client.SetClientDo(p.httpclient.Client.Do)
+	p.client.SetClientDo(p.httpclient.Do)
 	err = p.client.Connect()
 	if err != nil {
 		slog.Error("connect failed", "err", err)
@@ -123,6 +123,7 @@ func (p *PluginImpl) GetDirEntry(req *plugin.GetDirEntryRequest) (*plugin.DirEnt
 	pageSize := req.PageSize
 	fileInfos, err := p.client.ReadDir(dirPath)
 	if err != nil {
+		slog.Error("read dir failed", "err", err, "dir", dirPath, "fileInfos", fileInfos)
 		return nil, err
 	}
 	dirEntry := &plugin.DirEntry{
