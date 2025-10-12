@@ -89,6 +89,17 @@ func (p *PluginImpl) GetAuth() (*plugin.Auth, error) {
 	auth := &plugin.Auth{
 		AuthMethods: []*plugin.AuthMethod{},
 	}
+
+	url := util.GetAuthAddr("115pan")
+	authCallbackUrl := &plugin.AuthMethod_Callback{
+		Callback: &plugin.Callback{
+			CallbackUrl: url,
+		},
+	}
+	auth.AuthMethods = append(auth.AuthMethods, &plugin.AuthMethod{
+		Method: authCallbackUrl,
+	})
+
 	if authDeviceCodeData.Qrcode != "" {
 		qrCode, err := qr.Encode(authDeviceCodeData.Qrcode, qr.M, qr.Auto)
 		if err != nil {
@@ -122,15 +133,7 @@ func (p *PluginImpl) GetAuth() (*plugin.Auth, error) {
 			Method: scanQrcode,
 		})
 	}
-	url := util.GetAuthAddr("115pan")
-	authCallbackUrl := &plugin.AuthMethod_Callback{
-		Callback: &plugin.Callback{
-			CallbackUrl: url,
-		},
-	}
-	auth.AuthMethods = append(auth.AuthMethods, &plugin.AuthMethod{
-		Method: authCallbackUrl,
-	})
+
 	return auth, nil
 }
 

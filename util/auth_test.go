@@ -26,5 +26,12 @@ func TestAuth(t *testing.T) {
 	if token != nil {
 		t.Fatal("token is nil")
 	}
+}
 
+func TestGetQrcode(t *testing.T) {
+	res, err := GetAuthQrcode("alipan")
+	if err != nil {
+		t.Errorf("GetAuthQrcode failed: %v", err)
+	}
+	t.Log(string(res))
 }

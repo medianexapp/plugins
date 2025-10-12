@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/medianexapp/plugin_api/httpclient"
 	"github.com/medianexapp/plugin_api/plugin"
@@ -22,7 +23,9 @@ type Env struct {
 }
 
 func init() {
-	env := &Env{}
+	env := &Env{
+		ServerAddr: "http://127.0.0.1:19971",
+	}
 	json.Unmarshal(envData, env)
 	ServerAddr = env.ServerAddr
 }
@@ -76,22 +79,48 @@ func GetAuthToken(req *GetAuthTokenRequest) (*plugin.Token, error) {
 	return token, nil
 }
 
+type RequestQrcodeParams struct {
+	Method string            `json:"method"`
+	URL    string            `json:"url"`
+	Data   string            `json:"data"`
+	Header map[string]string `json:"header"`
+}
+
 func GetAuthQrcode(id string) ([]byte, error) {
-	url := fmt.Sprintf("%s%s?id=%s", ServerAddr, getAuthQrcodeUri, id)
-	resp, err := Client.Get(url)
+	authQrcodeUrl := fmt.Sprintf("%s%s?id=%s", ServerAddr, getAuthQrcodeUri, id)
+	resp, err := Client.Get(authQrcodeUrl)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	respBytes, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
-	slog.Info("get qrcode data", "id", id, "resp", string(respBytes))
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("get auth qrcode failed: %s", respBytes)
+	qrcodeParams := RequestQrcodeParams{}
+	err = json.Unmarshal(body, &qrcodeParams)
+	if err != nil {
+		return nil, err
 	}
-	return respBytes, nil
+	qrcodeParams.Data, _ = url.PathUnescape(qrcodeParams.Data)
+
+	req, err := http.NewRequest(qrcodeParams.Method, qrcodeParams.URL, strings.NewReader(qrcodeParams.Data))
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range qrcodeParams.Header {
+		req.Header.Set(k, v)
+	}
+	resp, err = Client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	return body, nil
 }
 
 func CheckAuthQrcode(id, key string) (*plugin.Token, error) {
