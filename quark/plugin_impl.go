@@ -188,7 +188,7 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 		FileResourceData: []*plugin.FileResource_FileResourceData{},
 	}
 	data := map[string][]string{
-		"fids": []string{file.Fid},
+		"fids": {file.Fid},
 	}
 	respData := []File{}
 	err = p.request("/file/download", http.MethodPost, nil, data, &respData)
@@ -217,48 +217,50 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 			})
 		}
 	}
-	// 获取播放链接
-	uri := "/file/v2/play"
-	reqData := PlayReq{
-		Fid:         file.Fid,
-		Resolutions: "normal,low,high,super,2k,4k",
-		Supports:    "fmp4,m3u8",
-	}
-	u := url.Values{}
-	u.Add("uc_param_str", "")
-	playData := PlayData{
-		VideoList: []VideoList{},
-	}
-	err = p.request(uri, http.MethodPost, u, reqData, &playData)
-	if err != nil {
-		return nil, err
-	}
-	// 4k
-	// super 2k
-	// 1080p
-	// 720p
-
-	for _, item := range playData.VideoList {
-		if item.VideoInfo.URL == "" {
-			continue
+	if req.IsMedia {
+		// 获取播放链接
+		uri := "/file/v2/play"
+		reqData := PlayReq{
+			Fid:         file.Fid,
+			Resolutions: "normal,low,high,super,2k,4k",
+			Supports:    "fmp4,m3u8",
 		}
-		expireTime, err := getExpires(item.VideoInfo.URL)
+		u := url.Values{}
+		u.Add("uc_param_str", "")
+		playData := PlayData{
+			VideoList: []VideoList{},
+		}
+		err = p.request(uri, http.MethodPost, u, reqData, &playData)
 		if err != nil {
-			slog.Error("get expires failed", "url", item.VideoInfo.URL, "err", err)
-
+			return nil, err
 		}
-		fileResource.FileResourceData = append(fileResource.FileResourceData, &plugin.FileResource_FileResourceData{
-			Url:          item.VideoInfo.URL,
-			Resolution:   resolutionMap[item.Resolution],
-			ResourceType: plugin.FileResource_Video,
-			Header: map[string]string{
-				"Cookie":     p.cookie,
-				"Referer":    referer,
-				"User-Agent": userAgent,
-			},
-			ExpireTime: expireTime,
-		})
+		// 4k
+		// super 2k
+		// 1080p
+		// 720p
+		for _, item := range playData.VideoList {
+			if item.VideoInfo.URL == "" {
+				continue
+			}
+			expireTime, err := getExpires(item.VideoInfo.URL)
+			if err != nil {
+				slog.Error("get expires failed", "url", item.VideoInfo.URL, "err", err)
+
+			}
+			fileResource.FileResourceData = append(fileResource.FileResourceData, &plugin.FileResource_FileResourceData{
+				Url:          item.VideoInfo.URL,
+				Resolution:   resolutionMap[item.Resolution],
+				ResourceType: plugin.FileResource_Video,
+				Header: map[string]string{
+					"Cookie":     p.cookie,
+					"Referer":    referer,
+					"User-Agent": userAgent,
+				},
+				ExpireTime: expireTime,
+			})
+		}
 	}
+
 	return fileResource, nil
 }
 

@@ -362,65 +362,68 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 		slog.Error("get down file failed", "msg", resp.Message)
 	}
 
-	subtitleData := &SubtitleData{
-		List: []Subtitle{},
-	}
-	resp = Response{
-		Data: &subtitleData,
-	}
-	p.ratelimit.Wait("/open/video/subtitle")
-	err = p.send(http.MethodGet, "/open/video/subtitle?"+reqURL.Encode(), nil, &resp)
-	if err != nil {
-		return nil, err
-	}
-	for _, subtitle := range subtitleData.List {
-		fileResource.FileResourceData = append(fileResource.FileResourceData, &plugin.FileResource_FileResourceData{
-			Url:          subtitle.URL,
-			ResourceType: plugin.FileResource_Subtitle,
-			Title:        subtitle.Title,
-			Header: map[string]string{
-				"User-Agent": httpclient.GetDefaultUserAgent(),
-			},
-		})
-	}
+	if req.IsMedia {
 
-	playVideoInfo := PlayVideoInfo{}
-	resp = Response{
-		Data: &playVideoInfo,
-	}
-	// get video play address
-	p.ratelimit.Wait("/open/video/play")
-	err = p.send(http.MethodGet, "/open/video/play?"+reqURL.Encode(), nil, &resp)
-	if err != nil {
-		return nil, err
-	}
-	if resp.State == true {
-		for _, playVideoInfo := range playVideoInfo.VideoURL {
-			data := &plugin.FileResource_FileResourceData{
-				Url:          playVideoInfo.URL,
-				ResourceType: plugin.FileResource_Video,
-				Title:        playVideoInfo.Title,
+		subtitleData := &SubtitleData{
+			List: []Subtitle{},
+		}
+		resp = Response{
+			Data: &subtitleData,
+		}
+		p.ratelimit.Wait("/open/video/subtitle")
+		err = p.send(http.MethodGet, "/open/video/subtitle?"+reqURL.Encode(), nil, &resp)
+		if err != nil {
+			return nil, err
+		}
+		for _, subtitle := range subtitleData.List {
+			fileResource.FileResourceData = append(fileResource.FileResourceData, &plugin.FileResource_FileResourceData{
+				Url:          subtitle.URL,
+				ResourceType: plugin.FileResource_Subtitle,
+				Title:        subtitle.Title,
 				Header: map[string]string{
 					"User-Agent": httpclient.GetDefaultUserAgent(),
 				},
-			}
-			if playVideoInfo.DefinitionN == 1 {
-				data.Resolution = plugin.FileResource_SD
-			} else if playVideoInfo.DefinitionN == 2 {
-				data.Resolution = plugin.FileResource_LD
-			} else if playVideoInfo.DefinitionN == 3 {
-				data.Resolution = plugin.FileResource_HD
-			} else if playVideoInfo.DefinitionN == 4 {
-				data.Resolution = plugin.FileResource_FHD
-			} else if playVideoInfo.DefinitionN == 4 {
-				data.Resolution = plugin.FileResource_UHD
-			} else if playVideoInfo.DefinitionN == 5 {
-				data.Resolution = plugin.FileResource_Original
-			}
-			fileResource.FileResourceData = append(fileResource.FileResourceData, data)
+			})
 		}
-	} else {
-		slog.Error("get play video info failed", "msg", resp.Message)
+
+		playVideoInfo := PlayVideoInfo{}
+		resp = Response{
+			Data: &playVideoInfo,
+		}
+		// get video play address
+		p.ratelimit.Wait("/open/video/play")
+		err = p.send(http.MethodGet, "/open/video/play?"+reqURL.Encode(), nil, &resp)
+		if err != nil {
+			return nil, err
+		}
+		if resp.State == true {
+			for _, playVideoInfo := range playVideoInfo.VideoURL {
+				data := &plugin.FileResource_FileResourceData{
+					Url:          playVideoInfo.URL,
+					ResourceType: plugin.FileResource_Video,
+					Title:        playVideoInfo.Title,
+					Header: map[string]string{
+						"User-Agent": httpclient.GetDefaultUserAgent(),
+					},
+				}
+				if playVideoInfo.DefinitionN == 1 {
+					data.Resolution = plugin.FileResource_SD
+				} else if playVideoInfo.DefinitionN == 2 {
+					data.Resolution = plugin.FileResource_LD
+				} else if playVideoInfo.DefinitionN == 3 {
+					data.Resolution = plugin.FileResource_HD
+				} else if playVideoInfo.DefinitionN == 4 {
+					data.Resolution = plugin.FileResource_FHD
+				} else if playVideoInfo.DefinitionN == 4 {
+					data.Resolution = plugin.FileResource_UHD
+				} else if playVideoInfo.DefinitionN == 5 {
+					data.Resolution = plugin.FileResource_Original
+				}
+				fileResource.FileResourceData = append(fileResource.FileResourceData, data)
+			}
+		} else {
+			slog.Error("get play video info failed", "msg", resp.Message)
+		}
 	}
 
 	return fileResource, nil

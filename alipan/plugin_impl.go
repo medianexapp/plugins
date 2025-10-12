@@ -455,63 +455,66 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 	} else {
 		slog.Error("get download url failed", "err", err)
 	}
-	playReq := &OpenFileGetVideoPreviewPlayInfoRequest{
-		DriveId:         driverId,
-		FileId:          fileId,
-		Category:        "live_transcoding",
-		GetSubtitleInfo: true,
-		TemplateId:      "LD|SD|HD|FHD|QHD",
-		UrlExpireSec:    4 * 60 * 50,
-	}
-	playRsp := &OpenFileGetVideoPreviewPlayInfoResponse{
-		VideoPreViewPlayInfo: &VideoPreViewPlayInfo{
-			LiveTranscodingTaskList:         []*LiveTranscodingTask{},
-			LiveTranscodingSubtitleTaskList: []*LiveTranscodingSubtitleTask{},
-		},
-	}
-	err = p.send(http.MethodPost, "/adrive/v1.0/openFile/getVideoPreviewPlayInfo", playReq, playRsp)
-	if err == nil {
-		for _, task := range playRsp.VideoPreViewPlayInfo.LiveTranscodingTaskList {
-			if task.Status != "finished" {
-				continue
-			}
-			var resolution plugin.FileResource_Resolution
-			switch task.TemplateId {
-			case "LD":
-				resolution = plugin.FileResource_LD
-			case "SD":
-				resolution = plugin.FileResource_SD
-			case "HD":
-				resolution = plugin.FileResource_HD
-			case "FHD":
-				resolution = plugin.FileResource_FHD
-			case "QHD":
-				resolution = plugin.FileResource_QHD
-			default:
-				continue
-			}
-			if task.Url == "" {
-				continue
-			}
-			fileResource.FileResourceData = append(fileResource.FileResourceData, &plugin.FileResource_FileResourceData{
-				Url:          task.Url,
-				ExpireTime:   uint64(time.Now().Add(time.Second * 4 * 60 * 50).Unix()),
-				ResourceType: plugin.FileResource_Video,
-				Resolution:   resolution,
-			})
+	if req.IsMedia {
+		playReq := &OpenFileGetVideoPreviewPlayInfoRequest{
+			DriveId:         driverId,
+			FileId:          fileId,
+			Category:        "live_transcoding",
+			GetSubtitleInfo: true,
+			TemplateId:      "LD|SD|HD|FHD|QHD",
+			UrlExpireSec:    4 * 60 * 50,
 		}
-		for _, task := range playRsp.VideoPreViewPlayInfo.LiveTranscodingSubtitleTaskList {
-			if task.Status != "finished" {
-				continue
-			}
-			fileResource.FileResourceData = append(fileResource.FileResourceData, &plugin.FileResource_FileResourceData{
-				Url:          task.Url,
-				Title:        task.Language,
-				ResourceType: plugin.FileResource_Subtitle,
-			})
+		playRsp := &OpenFileGetVideoPreviewPlayInfoResponse{
+			VideoPreViewPlayInfo: &VideoPreViewPlayInfo{
+				LiveTranscodingTaskList:         []*LiveTranscodingTask{},
+				LiveTranscodingSubtitleTaskList: []*LiveTranscodingSubtitleTask{},
+			},
 		}
-	} else {
-		slog.Error("get video preview play info failed", "err", err)
+		err = p.send(http.MethodPost, "/adrive/v1.0/openFile/getVideoPreviewPlayInfo", playReq, playRsp)
+		if err == nil {
+			for _, task := range playRsp.VideoPreViewPlayInfo.LiveTranscodingTaskList {
+				if task.Status != "finished" {
+					continue
+				}
+				var resolution plugin.FileResource_Resolution
+				switch task.TemplateId {
+				case "LD":
+					resolution = plugin.FileResource_LD
+				case "SD":
+					resolution = plugin.FileResource_SD
+				case "HD":
+					resolution = plugin.FileResource_HD
+				case "FHD":
+					resolution = plugin.FileResource_FHD
+				case "QHD":
+					resolution = plugin.FileResource_QHD
+				default:
+					continue
+				}
+				if task.Url == "" {
+					continue
+				}
+				fileResource.FileResourceData = append(fileResource.FileResourceData, &plugin.FileResource_FileResourceData{
+					Url:          task.Url,
+					ExpireTime:   uint64(time.Now().Add(time.Second * 4 * 60 * 50).Unix()),
+					ResourceType: plugin.FileResource_Video,
+					Resolution:   resolution,
+				})
+			}
+			for _, task := range playRsp.VideoPreViewPlayInfo.LiveTranscodingSubtitleTaskList {
+				if task.Status != "finished" {
+					continue
+				}
+				fileResource.FileResourceData = append(fileResource.FileResourceData, &plugin.FileResource_FileResourceData{
+					Url:          task.Url,
+					Title:        task.Language,
+					ResourceType: plugin.FileResource_Subtitle,
+				})
+			}
+		} else {
+			slog.Error("get video preview play info failed", "err", err)
+		}
 	}
+
 	return fileResource, nil
 }
