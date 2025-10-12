@@ -34,7 +34,7 @@ var (
 	ServerAddr         = ""
 	getAuthAddrUri     = "/api/get_auth_addr"
 	getAuthTokenUri    = "/api/get_auth_token"
-	getAuthQrcodeUri   = "/api/get_auth_qrcode"
+	getAuthQrcodeUri   = "/api/get_auth_qrcode_v2"
 	checkAuthQrcodeUri = "/api/check_auth_qrcode"
 	Client             = httpclient.NewClient()
 )
