@@ -3,5 +3,5 @@ name = "115Pan"
 desc = "115pan plugin"
 icon = "115pan.png"
 author = ["labulakalia(labulakalia@gmail.com)"]
-version = "v0.0.4"
-changelog = ["change file entry size type to uint64"]
+version = "v0.0.5"
+changelog = ["fix get qrcode data from localhost"]

@@ -3,5 +3,5 @@ name = "Alipan"
 desc = "Alipan driver plugin"
 icon = "alipan.png"
 author = ["author1(labulakalia@gmail.com)"]
-version = "v0.0.2"
-changelog = ["add rate limit"]
+version = "v0.0.3"
+changelog = ["fix get qrcode data from localhost"]
