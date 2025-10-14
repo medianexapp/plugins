@@ -8,14 +8,14 @@ require (
 	github.com/medianexapp/ftp v0.0.0-20250425113218-131712bc06d6
 	github.com/medianexapp/go-smb2 v0.0.0-20250425112922-92edacdefca5
 	github.com/medianexapp/gowebdav v0.0.0-20250425112725-41a667437dfa
-	github.com/medianexapp/plugin_api v0.0.25-0.20250529122956-600402839cc8
+	github.com/medianexapp/plugin_api v0.0.25-0.20251014140127-9bc133c38219
 	github.com/medianexapp/sftp v1.13.10-0.20250425113120-4ffdd4c8163a
 	golang.org/x/crypto v0.37.0
 )
 
 require (
 	github.com/aperturerobotics/json-iterator-lite v1.0.0 // indirect
-	github.com/aperturerobotics/protobuf-go-lite v0.9.1 // indirect
+	github.com/aperturerobotics/protobuf-go-lite v0.11.0 // indirect
 	github.com/cloudsoda/sddl v0.0.0-20250224235906-926454e91efc // indirect
 	github.com/geoffgarside/ber v1.1.0 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect

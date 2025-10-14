@@ -15,7 +15,6 @@ import (
 	"plugins/util"
 	"time"
 
-	netutil "github.com/labulakalia/wazero_net/util"
 	_ "github.com/labulakalia/wazero_net/wasi/http"
 	"github.com/medianexapp/plugin_api/httpclient"
 	"github.com/medianexapp/plugin_api/plugin"
@@ -75,22 +74,11 @@ func (p *PluginImpl) GetAuth() (*plugin.Auth, error) {
 		slog.Error("unmarshal auth qrcode failed", "err", err)
 		return nil, err
 	}
-	qrResp, err := p.client.Get(qrCode.QrcodeURL)
-	if err != nil {
-		return nil, err
-	}
-	qrRespBytes, err := io.ReadAll(qrResp.Body)
-	if err != nil {
-		return nil, err
-	}
-	if qrResp.StatusCode != http.StatusOK {
-		return nil, errors.New(netutil.BytesToString(qrRespBytes))
-	}
 	authQrcode := &plugin.AuthMethod_Scanqrcode{
 		Scanqrcode: &plugin.Scanqrcode{
-			QrcodeImage:      qrRespBytes,
 			QrcodeImageParam: qrCode.DeviceCode,
 			QrcodeExpireTime: uint64(time.Now().Unix()) + uint64(qrCode.ExpiresIn),
+			QrcodeImageUrl:   qrCode.QrcodeURL,
 		},
 	}
 

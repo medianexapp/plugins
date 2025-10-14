@@ -1,12 +1,10 @@
 package main
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"image/png"
 	"io"
 	"log/slog"
 	"net/http"
@@ -16,8 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/boombuler/barcode"
-	"github.com/boombuler/barcode/qr"
 	"github.com/medianexapp/plugin_api/httpclient"
 	"github.com/medianexapp/plugin_api/plugin"
 	"github.com/medianexapp/plugin_api/ratelimit"
@@ -99,21 +95,8 @@ func (p *PluginImpl) GetAuth() (*plugin.Auth, error) {
 	auth.AuthMethods = append(auth.AuthMethods, &plugin.AuthMethod{
 		Method: authCallbackUrl,
 	})
-
+	slog.Info("get 115pan auth success")
 	if authDeviceCodeData.Qrcode != "" {
-		qrCode, err := qr.Encode(authDeviceCodeData.Qrcode, qr.M, qr.Auto)
-		if err != nil {
-			return nil, err
-		}
-		qrCode, err = barcode.Scale(qrCode, 200, 200)
-		if err != nil {
-			return nil, err
-		}
-		buf := &bytes.Buffer{}
-		err = png.Encode(buf, qrCode)
-		if err != nil {
-			return nil, err
-		}
 		p := map[string]string{
 			"uid":  authDeviceCodeData.Uid,
 			"time": fmt.Sprint(authDeviceCodeData.Time),
@@ -125,8 +108,8 @@ func (p *PluginImpl) GetAuth() (*plugin.Auth, error) {
 		}
 		scanQrcode := &plugin.AuthMethod_Scanqrcode{
 			Scanqrcode: &plugin.Scanqrcode{
-				QrcodeImage:      buf.Bytes(),
-				QrcodeImageParam: string(data),
+				QrcodeImageParam:   string(data),
+				QrcodeImageContent: authDeviceCodeData.Qrcode,
 			},
 		}
 		auth.AuthMethods = append(auth.AuthMethods, &plugin.AuthMethod{

@@ -116,28 +116,12 @@ func (p *PluginImpl) getQrcode() (*plugin.AuthMethod_Scanqrcode, error) {
 	if err != nil {
 		return nil, err
 	}
-	qrCodeResp, err := http.Get(qrResp.QrCodeUrl)
-	if err != nil {
-		return nil, err
-	}
-	defer qrCodeResp.Body.Close()
-	if qrCodeResp.StatusCode != http.StatusOK {
-		respData, err := io.ReadAll(qrCodeResp.Body)
-		if err != nil {
-			return nil, err
-		}
-		return nil, fmt.Errorf("get qrcode data failed: %s", respData)
-	}
-	qrcodeData, err := io.ReadAll(qrCodeResp.Body)
-	if err != nil {
-		return nil, err
-	}
 
 	return &plugin.AuthMethod_Scanqrcode{
 		Scanqrcode: &plugin.Scanqrcode{
-			QrcodeImage:      qrcodeData,
 			QrcodeImageParam: qrResp.Sid,
 			QrcodeExpireTime: uint64(time.Now().Add(time.Minute * 3).Unix()),
+			QrcodeImageUrl:   qrResp.QrCodeUrl,
 		},
 	}, nil
 }
@@ -147,15 +131,6 @@ func (p *PluginImpl) GetAuth() (*plugin.Auth, error) {
 	auth := &plugin.Auth{
 		AuthMethods: []*plugin.AuthMethod{},
 	}
-	authScanQrcode, err := p.getQrcode()
-	if err != nil {
-		slog.Error("get qrcode failed", "err", err)
-		return nil, err
-	}
-
-	auth.AuthMethods = append(auth.AuthMethods, &plugin.AuthMethod{
-		Method: authScanQrcode,
-	})
 
 	url := util.GetAuthAddr("alipan")
 	authCallbackUrl := &plugin.AuthMethod_Callback{
@@ -166,6 +141,17 @@ func (p *PluginImpl) GetAuth() (*plugin.Auth, error) {
 	auth.AuthMethods = append(auth.AuthMethods, &plugin.AuthMethod{
 		Method: authCallbackUrl,
 	})
+
+	authScanQrcode, err := p.getQrcode()
+	if err != nil {
+		slog.Error("get qrcode failed", "err", err)
+		return nil, err
+	}
+
+	auth.AuthMethods = append(auth.AuthMethods, &plugin.AuthMethod{
+		Method: authScanQrcode,
+	})
+
 	return auth, nil
 }
 

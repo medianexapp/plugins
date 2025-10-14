@@ -2,6 +2,8 @@ github.com/aperturerobotics/json-iterator-lite v1.0.0 h1:cihbrYWoK/S2RYXhJLpDZd+
 github.com/aperturerobotics/json-iterator-lite v1.0.0/go.mod h1:snaApCEDtrHHP6UWSLKiYNOZU9A5NyzccKenx9oZEzg=
 github.com/aperturerobotics/protobuf-go-lite v0.9.1 h1:P1knXKnwLJpVE8fmeXYGckKu79IhqUvKRdCfJNR0MwQ=
 github.com/aperturerobotics/protobuf-go-lite v0.9.1/go.mod h1:fULrxQxEBWKQm7vvju9AfjTp9yfHoLgwMQWTiZQ2tg0=
+github.com/aperturerobotics/protobuf-go-lite v0.11.0 h1:IAaZISqrEpodqECYxk0yKWgROEbZtMhs7bErP+Zma9o=
+github.com/aperturerobotics/protobuf-go-lite v0.11.0/go.mod h1:c4kGy7Dkfz6B1m0t4QBIMQoNeQ7m+nYj3Qxxnlwhygo=
 github.com/boombuler/barcode v1.0.2 h1:79yrbttoZrLGkL/oOI8hBrUKucwOL0oOjUgEguGMcJ4=
 github.com/boombuler/barcode v1.0.2/go.mod h1:paBWMcWSl3LHKBqUq+rly7CNSldXjb2rDl3JlRe0mD8=
 github.com/cloudsoda/sddl v0.0.0-20250224235906-926454e91efc h1:0xCWmFKBmarCqqqLeM7jFBSw/Or81UEElFqO8MY+GDs=
@@ -50,6 +52,8 @@ github.com/medianexapp/plugin_api v0.0.25-0.20250522020710-a9284a5d036f h1:dvAOY
 github.com/medianexapp/plugin_api v0.0.25-0.20250522020710-a9284a5d036f/go.mod h1:d+ioMKd/TYZl7axXX0PYM/2Ox1oyScIIvFrW/L6ymwQ=
 github.com/medianexapp/plugin_api v0.0.25-0.20250529122956-600402839cc8 h1:vX2VRCa6fY5lEChQ6V3ocYa58fp0aNdOwzwKWHmF6sg=
 github.com/medianexapp/plugin_api v0.0.25-0.20250529122956-600402839cc8/go.mod h1:d+ioMKd/TYZl7axXX0PYM/2Ox1oyScIIvFrW/L6ymwQ=
+github.com/medianexapp/plugin_api v0.0.25-0.20251014140127-9bc133c38219 h1:tGWJiWzavaMVSoqhvEF9nXOrlFIKNECyM8BlszP6Jz0=
+github.com/medianexapp/plugin_api v0.0.25-0.20251014140127-9bc133c38219/go.mod h1:d+ioMKd/TYZl7axXX0PYM/2Ox1oyScIIvFrW/L6ymwQ=
 github.com/medianexapp/sftp v1.13.10-0.20250425113120-4ffdd4c8163a h1:a1AMBh4Glxjl8gb9JW1kJ1W92cgBBkLlnZHCOAPBjQg=
 github.com/medianexapp/sftp v1.13.10-0.20250425113120-4ffdd4c8163a/go.mod h1:BhBMCAsN8EaWmFxpa/Au+jX8fG8CLFKXs8LOjksAFH0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
