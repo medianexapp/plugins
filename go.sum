@@ -54,6 +54,8 @@ github.com/medianexapp/plugin_api v0.0.25-0.20250529122956-600402839cc8 h1:vX2VR
 github.com/medianexapp/plugin_api v0.0.25-0.20250529122956-600402839cc8/go.mod h1:d+ioMKd/TYZl7axXX0PYM/2Ox1oyScIIvFrW/L6ymwQ=
 github.com/medianexapp/plugin_api v0.0.25-0.20251014140127-9bc133c38219 h1:tGWJiWzavaMVSoqhvEF9nXOrlFIKNECyM8BlszP6Jz0=
 github.com/medianexapp/plugin_api v0.0.25-0.20251014140127-9bc133c38219/go.mod h1:d+ioMKd/TYZl7axXX0PYM/2Ox1oyScIIvFrW/L6ymwQ=
+github.com/medianexapp/plugin_api v0.0.25-0.20251015132759-5bdd0a7449f8 h1:AzR7B2zMrIw7vjDkKyqOy5TYsNHrD7si53qUDMR9EJc=
+github.com/medianexapp/plugin_api v0.0.25-0.20251015132759-5bdd0a7449f8/go.mod h1:d+ioMKd/TYZl7axXX0PYM/2Ox1oyScIIvFrW/L6ymwQ=
 github.com/medianexapp/sftp v1.13.10-0.20250425113120-4ffdd4c8163a h1:a1AMBh4Glxjl8gb9JW1kJ1W92cgBBkLlnZHCOAPBjQg=
 github.com/medianexapp/sftp v1.13.10-0.20250425113120-4ffdd4c8163a/go.mod h1:BhBMCAsN8EaWmFxpa/Au+jX8fG8CLFKXs8LOjksAFH0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

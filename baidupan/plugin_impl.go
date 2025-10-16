@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"net/http"
 	"net/url"
 	"plugins/util"
 	"time"
@@ -28,10 +27,11 @@ NOTE: net and http use package
 */
 
 type PluginImpl struct {
-	client    *httpclient.Client
-	token     *plugin.Token
-	userInfo  *UserInfo
-	ratelimit *ratelimit.RateLimit
+	client          *httpclient.Client
+	token           *plugin.Token
+	userInfo        *UserInfo
+	ratelimit       *ratelimit.RateLimit
+	lastCheckQrcode int64
 }
 
 func NewPluginImpl() *PluginImpl {
@@ -92,13 +92,14 @@ func (p *PluginImpl) GetAuth() (*plugin.Auth, error) {
 func (p *PluginImpl) CheckAuthMethod(authMethod *plugin.AuthMethod) (authData *plugin.AuthData, err error) {
 	var (
 		token        *plugin.Token
-		authCode     string
 		refreshToken string
-		state        string
 	)
 	switch v := authMethod.Method.(type) {
 	case *plugin.AuthMethod_Scanqrcode:
-		time.Sleep(time.Second * 3)
+		// qrcode请求间隔最少5秒 https://pan.baidu.com/union/doc/fl1x114ti
+		if time.Now().Unix()-p.lastCheckQrcode < 5 {
+			time.Sleep(time.Duration(time.Now().Unix()-p.lastCheckQrcode) * time.Second)
+		}
 		token, err = util.CheckAuthQrcode("baidupan", v.Scanqrcode.QrcodeImageParam)
 		if err != nil {
 			return nil, err
@@ -107,12 +108,20 @@ func (p *PluginImpl) CheckAuthMethod(authMethod *plugin.AuthMethod) (authData *p
 			return nil, nil
 		}
 	case *plugin.AuthMethod_Refresh:
-		token := &plugin.Token{}
+		token = &plugin.Token{}
 		err = token.UnmarshalVT(v.Refresh.AuthData.AuthDataBytes)
 		if err != nil {
 			return nil, err
 		}
 		refreshToken = token.RefreshToken
+		token, err = util.GetAuthToken(&util.GetAuthTokenRequest{
+			Id:           "baidupan",
+			RefreshToken: refreshToken,
+		})
+		if err != nil {
+			slog.Error("authCode to access token failed", "err", err)
+			return nil, err
+		}
 	case *plugin.AuthMethod_Callback:
 		slog.Info("recv callback data", "callBackData", v.Callback.CallbackUrlData)
 		token = &plugin.Token{}
@@ -131,18 +140,6 @@ func (p *PluginImpl) CheckAuthMethod(authMethod *plugin.AuthMethod) (authData *p
 	default:
 		return nil, fmt.Errorf("unsupport %+v", v)
 	}
-	if token == nil {
-		token, err = util.GetAuthToken(&util.GetAuthTokenRequest{
-			Id:           "baidupan",
-			Code:         authCode,
-			State:        state,
-			RefreshToken: refreshToken,
-		})
-		if err != nil {
-			slog.Error("authCode to access token failed", "err", err)
-			return nil, err
-		}
-	}
 
 	tokenBytes, err := token.MarshalVT()
 	if err != nil {
@@ -158,7 +155,7 @@ func (p *PluginImpl) CheckAuthMethod(authMethod *plugin.AuthMethod) (authData *p
 	return authData, nil
 }
 
-func (p *PluginImpl) sendData(_ string, uri string, u url.Values, resp any) error {
+func (p *PluginImpl) sendData(uri string, u url.Values, resp any) error {
 	u.Add("access_token", p.token.AccessToken)
 	reqUrl := fmt.Sprintf("%s%s?%s", BaiduPanURL, uri, u.Encode())
 	reqResp, err := p.client.Get(reqUrl)
@@ -201,7 +198,7 @@ func (p *PluginImpl) CheckAuthData(authDataBytes []byte) error {
 	userInfo := &UserInfo{}
 	u := url.Values{}
 	u.Add("method", "uinfo")
-	err = p.sendData(http.MethodGet, "/rest/2.0/xpan/nas", u, userInfo)
+	err = p.sendData("/rest/2.0/xpan/nas", u, userInfo)
 	if err != nil {
 		return err
 	}
@@ -225,7 +222,7 @@ func (p *PluginImpl) GetDirEntry(req *plugin.GetDirEntryRequest) (*plugin.DirEnt
 	resp := &FileListResponse{
 		List: []*FileListItem{},
 	}
-	err := p.sendData(http.MethodGet, "/rest/2.0/xpan/file", u, resp)
+	err := p.sendData("/rest/2.0/xpan/file", u, resp)
 	if err != nil {
 		slog.Error("list file failed", "err", err)
 		return nil, err
@@ -269,7 +266,7 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 	u.Add("method", "filemetas")
 	u.Add("fsids", fmt.Sprintf("[%d]", fileItem.FsId))
 	u.Add("dlink", "1")
-	err = p.sendData(http.MethodGet, "/rest/2.0/xpan/multimedia", u, fileMetaResp)
+	err = p.sendData("/rest/2.0/xpan/multimedia", u, fileMetaResp)
 	if err != nil {
 		return nil, err
 	}

@@ -35,6 +35,10 @@ type PluginImpl struct {
 	ratelimit *ratelimit.RateLimit
 }
 
+const (
+	checkQrcodeStatusURL = "https://qrcodeapi.115.com/get/status/"
+)
+
 func NewPluginImpl() *PluginImpl {
 	slog.SetLogLoggerLevel(slog.LevelDebug)
 	client := httpclient.NewClient()
@@ -139,17 +143,57 @@ func (p *PluginImpl) CheckAuthMethod(authMethod *plugin.AuthMethod) (*plugin.Aut
 			RefreshToken: token.RefreshToken,
 		})
 	case *plugin.AuthMethod_Scanqrcode:
-		token, err = util.CheckAuthQrcode("115pan", v.Scanqrcode.QrcodeImageParam)
+		// https://www.yuque.com/115yun/open/shtpzfhewv5nag11#6d33298a
+		// 长轮训接口
+		slog.Info("recv callback data", "callBackData", v.Scanqrcode.QrcodeImageParam)
+		client := httpclient.NewClient(httpclient.WithTimeout(time.Minute * 5))
+		param := map[string]string{}
+		err := json.Unmarshal([]byte(v.Scanqrcode.QrcodeImageParam), &param)
 		if err != nil {
-			// if err,need refresh
-			// 115pan qrcode if scan,qrcode will expire
+			slog.Error("unmarshal failed", "err", err)
 			return nil, err
 		}
-		if token == nil {
-			// scan not success
-			slog.Warn("qrcode not scan success")
+
+		u := url.Values{}
+		for k, v := range param {
+			u.Add(k, fmt.Sprint(v))
+		}
+		checkUrlStatus := fmt.Sprintf("%s?%s", checkQrcodeStatusURL, u.Encode())
+
+		resp, err := client.Get(checkUrlStatus)
+		if err != nil {
+			slog.Error("115pan request failed", "err", err)
+			return nil, err
+		}
+		defer resp.Body.Close()
+
+		respBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			slog.Error("115pan read response failed", "err", err)
+			return nil, err
+		}
+		qrStatus := &Qrcode115panStatus{}
+		qrcode115panData := &Qrcode115panResp{
+			Data: qrStatus,
+		}
+		err = json.Unmarshal(respBytes, qrcode115panData)
+		if err != nil {
+			slog.Error("unmarshal failed", "err", err)
+			return nil, err
+		}
+		if qrcode115panData.State == 0 {
+			return nil, errors.New(qrcode115panData.Message)
+		}
+		if qrStatus.Status != 2 {
+			slog.Warn("qrcode not scan success", "resp", qrcode115panData)
 			return nil, nil
 		}
+		uid := u.Get("uid")
+		// 请求接口为长连接
+		token, err = util.GetAuthToken(&util.GetAuthTokenRequest{
+			Id:  "115pan",
+			Uid: uid,
+		})
 	case *plugin.AuthMethod_Callback:
 		slog.Info("recv callback data", "callBackData", v.Callback.CallbackUrlData)
 		token = &plugin.Token{}
@@ -168,7 +212,6 @@ func (p *PluginImpl) CheckAuthMethod(authMethod *plugin.AuthMethod) (*plugin.Aut
 	default:
 		return nil, errors.New("unsupported auth method")
 	}
-
 	if err != nil {
 		slog.Error("authCode to access token failed", "err", err)
 		return nil, err

@@ -161,24 +161,45 @@ func (p *PluginImpl) CheckAuthMethod(authMethod *plugin.AuthMethod) (authData *p
 		token        *plugin.Token
 		authCode     string
 		refreshToken string
-		state        string
 	)
 	switch v := authMethod.Method.(type) {
 	case *plugin.AuthMethod_Scanqrcode:
-		token, err = util.CheckAuthQrcode("alipan", v.Scanqrcode.QrcodeImageParam)
+		url := fmt.Sprintf("https://openapi.alipan.com/oauth/qrcode/%s/status", v.Scanqrcode.QrcodeImageParam)
+		resp, err := util.HttpClient.Get(url)
 		if err != nil {
 			return nil, err
 		}
-		if token == nil {
+		defer resp.Body.Close()
+		type QrcodeStatus struct {
+			Status   string `json:"status"`
+			AuthCode string `json:"authCode"`
+		}
+		respBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		slog.Debug("check alipan qrcode status", "qrcodeStatus", string(respBytes), "status", resp.StatusCode)
+		qrcodeStatus := &QrcodeStatus{}
+		if err := json.Unmarshal(respBytes, qrcodeStatus); err != nil {
+			return nil, err
+		}
+
+		if qrcodeStatus.Status == "QRCodeExpired" {
+			slog.Error("qrcode expired", "key", v.Scanqrcode.QrcodeImageParam)
+			return nil, fmt.Errorf("QR code expired")
+		}
+		if qrcodeStatus.Status != "LoginSuccess" {
+			slog.Warn("qrcode not login success", "status", qrcodeStatus.Status)
 			return nil, nil
 		}
+		authCode = qrcodeStatus.AuthCode
 	case *plugin.AuthMethod_Refresh:
-		token := &plugin.Token{}
-		err = token.UnmarshalVT(v.Refresh.AuthData.AuthDataBytes)
+		retoken := &plugin.Token{}
+		err = retoken.UnmarshalVT(v.Refresh.AuthData.AuthDataBytes)
 		if err != nil {
 			return nil, err
 		}
-		refreshToken = token.RefreshToken
+		refreshToken = retoken.RefreshToken
 	case *plugin.AuthMethod_Callback:
 		slog.Info("recv callback data", "callBackData", v.Callback.CallbackUrlData)
 		token = &plugin.Token{}
@@ -199,9 +220,9 @@ func (p *PluginImpl) CheckAuthMethod(authMethod *plugin.AuthMethod) (authData *p
 	}
 	if token == nil {
 		token, err = util.GetAuthToken(&util.GetAuthTokenRequest{
-			Id:           "alipan",
-			Code:         authCode,
-			State:        state,
+			Id:   "alipan",
+			Code: authCode,
+
 			RefreshToken: refreshToken,
 		})
 		if err != nil {

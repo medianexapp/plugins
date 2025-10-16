@@ -88,3 +88,16 @@ type PlayVideoInfo struct {
 	// 	Title string `json:"title"`
 	// }
 }
+
+type Qrcode115panStatus struct {
+	Msg     string `json:"msg"`
+	Status  int    `json:"status"`
+	Version string `json:"version"`
+}
+
+type Qrcode115panResp struct {
+	State   int    `json:"state"`
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Data    any    `json:"data"`
+}

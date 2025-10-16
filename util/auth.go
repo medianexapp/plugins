@@ -36,7 +36,7 @@ var (
 	getAuthTokenUri    = "/api/get_auth_token"
 	getAuthQrcodeUri   = "/api/get_auth_qrcode_v2"
 	checkAuthQrcodeUri = "/api/check_auth_qrcode"
-	Client             = httpclient.NewClient()
+	HttpClient         = httpclient.NewClient()
 )
 
 func GetAuthAddr(pluginId string) string {
@@ -45,20 +45,17 @@ func GetAuthAddr(pluginId string) string {
 
 type GetAuthTokenRequest struct {
 	Id           string `json:"id"`
-	State        string `json:"state"`
 	Code         string `json:"code"`
-	CodeVerifier string `json:"code_verifier"`
 	RefreshToken string `json:"refresh_token"`
+	Uid          string `json:"uid"`
 }
 
 func GetAuthToken(req *GetAuthTokenRequest) (*plugin.Token, error) {
 	u := url.Values{}
 	u.Set("id", req.Id)
-	u.Set("state", req.State)
 	u.Set("code", req.Code)
-	u.Set("code_verifier", req.CodeVerifier)
 	u.Set("refresh_token", req.RefreshToken)
-	resp, err := Client.Get(fmt.Sprintf("%s%s?%s", ServerAddr, getAuthTokenUri, u.Encode()))
+	resp, err := HttpClient.Get(fmt.Sprintf("%s%s?%s", ServerAddr, getAuthTokenUri, u.Encode()))
 	if err != nil {
 		err = errors.Unwrap(err)
 		return nil, err
@@ -88,7 +85,7 @@ type RequestQrcodeParams struct {
 
 func GetAuthQrcode(id string) ([]byte, error) {
 	authQrcodeUrl := fmt.Sprintf("%s%s?id=%s", ServerAddr, getAuthQrcodeUri, id)
-	resp, err := Client.Get(authQrcodeUrl)
+	resp, err := HttpClient.Get(authQrcodeUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +108,7 @@ func GetAuthQrcode(id string) ([]byte, error) {
 	for k, v := range qrcodeParams.Header {
 		req.Header.Set(k, v)
 	}
-	resp, err = Client.Do(req)
+	resp, err = HttpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +122,7 @@ func GetAuthQrcode(id string) ([]byte, error) {
 
 func CheckAuthQrcode(id, key string) (*plugin.Token, error) {
 	url := fmt.Sprintf("%s%s?id=%s&key=%s", ServerAddr, checkAuthQrcodeUri, id, key)
-	resp, err := Client.Get(url)
+	resp, err := HttpClient.Get(url)
 	if err != nil {
 		return nil, err
 	}
