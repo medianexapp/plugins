@@ -51,22 +51,29 @@ type GetAuthTokenRequest struct {
 }
 
 func GetAuthToken(req *GetAuthTokenRequest) (*plugin.Token, error) {
+	slog.Info("start get auth token", "req", req)
 	u := url.Values{}
 	u.Set("id", req.Id)
 	u.Set("code", req.Code)
 	u.Set("refresh_token", req.RefreshToken)
+	u.Set("uid", req.Uid)
 	resp, err := HttpClient.Get(fmt.Sprintf("%s%s?%s", ServerAddr, getAuthTokenUri, u.Encode()))
 	if err != nil {
 		err = errors.Unwrap(err)
 		return nil, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		errMsg, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		slog.Error("resp err msg", "errMsg", string(errMsg))
+		return nil, errors.New(string(errMsg))
+	}
 	respBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("get auth token failed: %s", respBytes)
 	}
 	token := &plugin.Token{}
 	err = token.UnmarshalVT(respBytes)

@@ -4,11 +4,11 @@ go 1.24.0
 
 require (
 	github.com/boombuler/barcode v1.0.2
-	github.com/labulakalia/wazero_net v0.0.9-0.20250522104624-d43d2bec26eb
+	github.com/labulakalia/wazero_net v0.0.9-0.20251017142400-97830bf6e9ad
 	github.com/medianexapp/ftp v0.0.0-20250425113218-131712bc06d6
 	github.com/medianexapp/go-smb2 v0.0.0-20250425112922-92edacdefca5
 	github.com/medianexapp/gowebdav v0.0.0-20250425112725-41a667437dfa
-	github.com/medianexapp/plugin_api v0.0.25-0.20251015132759-5bdd0a7449f8
+	github.com/medianexapp/plugin_api v0.0.25-0.20251017143516-ab2608e735fa
 	github.com/medianexapp/sftp v1.13.10-0.20250425113120-4ffdd4c8163a
 	golang.org/x/crypto v0.37.0
 )
