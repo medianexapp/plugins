@@ -141,7 +141,6 @@ func CheckAuthQrcode(id, key string) (*plugin.Token, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	slog.Info("get qrcode data", "id", id, "resp", string(respBytes))
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("get auth qrcode failed: %s", respBytes)

@@ -27,11 +27,10 @@ NOTE: net and http use package
 */
 
 type PluginImpl struct {
-	client          *httpclient.Client
-	token           *plugin.Token
-	userInfo        *UserInfo
-	ratelimit       *ratelimit.RateLimit
-	lastCheckQrcode int64
+	client    *httpclient.Client
+	token     *plugin.Token
+	userInfo  *UserInfo
+	ratelimit *ratelimit.RateLimit
 }
 
 func NewPluginImpl() *PluginImpl {
@@ -97,9 +96,7 @@ func (p *PluginImpl) CheckAuthMethod(authMethod *plugin.AuthMethod) (authData *p
 	switch v := authMethod.Method.(type) {
 	case *plugin.AuthMethod_Scanqrcode:
 		// qrcode请求间隔最少5秒 https://pan.baidu.com/union/doc/fl1x114ti
-		if time.Now().Unix()-p.lastCheckQrcode < 5 {
-			time.Sleep(time.Duration(time.Now().Unix()-p.lastCheckQrcode) * time.Second)
-		}
+		time.Sleep(3 * time.Second)
 		token, err = util.CheckAuthQrcode("baidupan", v.Scanqrcode.QrcodeImageParam)
 		if err != nil {
 			return nil, err
