@@ -1,6 +1,7 @@
 package util
 
 import (
+	"bytes"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -52,12 +53,11 @@ type GetAuthTokenRequest struct {
 
 func GetAuthToken(req *GetAuthTokenRequest) (*plugin.Token, error) {
 	slog.Info("start get auth token", "req", req)
-	u := url.Values{}
-	u.Set("id", req.Id)
-	u.Set("code", req.Code)
-	u.Set("refresh_token", req.RefreshToken)
-	u.Set("uid", req.Uid)
-	resp, err := HttpClient.Get(fmt.Sprintf("%s%s?%s", ServerAddr, getAuthTokenUri, u.Encode()))
+	reqData, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := HttpClient.Post(fmt.Sprintf("%s%s", ServerAddr, getAuthTokenUri), "application/json", bytes.NewBuffer(reqData))
 	if err != nil {
 		return nil, err
 	}

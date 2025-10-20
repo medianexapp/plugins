@@ -30,7 +30,7 @@ type PluginImpl struct {
 
 func NewPluginImpl() *PluginImpl {
 	ftpAuth := &ftpAuth{
-		Addr:     plugin.String("127.0.0.1"),
+		Addr:     plugin.String("127.0.0.1:21"),
 		User:     plugin.String(""),
 		Password: plugin.ObscureString(""),
 	}
