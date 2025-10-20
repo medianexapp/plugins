@@ -59,7 +59,6 @@ func GetAuthToken(req *GetAuthTokenRequest) (*plugin.Token, error) {
 	u.Set("uid", req.Uid)
 	resp, err := HttpClient.Get(fmt.Sprintf("%s%s?%s", ServerAddr, getAuthTokenUri, u.Encode()))
 	if err != nil {
-		err = errors.Unwrap(err)
 		return nil, err
 	}
 	defer resp.Body.Close()
