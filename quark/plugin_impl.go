@@ -70,6 +70,7 @@ func (p *PluginImpl) GetAuth() (*plugin.Auth, error) {
 						},
 					},
 				},
+				HelpDocUrl: "",
 			},
 		},
 	}
