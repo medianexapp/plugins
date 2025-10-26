@@ -14,6 +14,8 @@ import (
 type PluginImpl struct {
 }
 
+// https://123yunpan.yuque.com/org-wiki-123yunpan-muaork/cr6ced/txgcvbfgh0gtuad5
+
 func NewPluginImpl() *PluginImpl {
 	slog.SetLogLoggerLevel(slog.LevelDebug)
 	return &PluginImpl{
