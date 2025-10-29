@@ -1,13 +1,11 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/medianexapp/plugin_api/httpclient"
@@ -154,62 +152,165 @@ func (p *PluginImpl) GetDirEntry(req *plugin.GetDirEntryRequest) (*plugin.DirEnt
 	if req.PageSize == 0 {
 		req.PageSize = 100
 	}
-	parentFileId := map[string]string{
-		"parentFileId": "",
-		"limit":        fmt.Sprintf("%d", req.PageSize),
-		"lastFileId":   req.DirPageKey,
+	params := map[string]string{
+		"limit":      fmt.Sprintf("%d", req.PageSize),
+		"lastFileId": req.DirPageKey,
 	}
-	parentFileId = parentFileId
-	return nil, nil
+	var parentFileId string
+	if req.Path == "/" {
+		parentFileId = "0"
+	} else {
+		fileItem := FileItem{}
+		if req.FileEntry == nil {
+			return nil, fmt.Errorf("can get file info")
+		}
+		err := json.Unmarshal(req.FileEntry.RawData, &fileItem)
+		if err != nil {
+			return nil, err
+		}
+		parentFileId = fmt.Sprint(fileItem.FileId)
+	}
+	params["parentFileId"] = parentFileId
+	resp := FileListResponse{
+		FileList: []FileItem{},
+	}
+	err := p.sendData(http.MethodGet, "/api/v2/file/list", params, &resp)
+	if err != nil {
+		return nil, err
+	}
+	getDirEntryResp := &plugin.DirEntry{
+		FileEntries: []*plugin.FileEntry{},
+		DirPageKey:  fmt.Sprint(resp.FileList),
+	}
+	for _, fileItem := range resp.FileList {
+		fileEntry := &plugin.FileEntry{
+			Name: fileItem.FileName,
+			Size: fileItem.Size,
+		}
+		if fileItem.Type == 0 {
+			fileEntry.FileType = plugin.FileEntry_FileTypeFile
+		} else {
+			fileEntry.FileType = plugin.FileEntry_FileTypeDir
+		}
+		rawData, err := json.Marshal(fileItem)
+		if err != nil {
+			return nil, err
+		}
+		fileEntry.RawData = rawData
+		t, err := time.Parse("2006-01-02 15:04:05", fileItem.CreateAt)
+		if err == nil {
+			fileEntry.CreatedTime = uint64(t.Unix())
+		}
+		t, err = time.Parse("2006-01-02 15:04:05", fileItem.UpdateAt)
+		if err == nil {
+			fileEntry.ModifiedTime = uint64(t.Unix())
+			fileEntry.AccessedTime = uint64(t.Unix())
+		}
+		getDirEntryResp.FileEntries = append(getDirEntryResp.FileEntries, fileEntry)
+	}
+
+	return getDirEntryResp, nil
 }
 
 // GetFileResource implements IPlugin.
 func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugin.FileResource, error) {
 	slog.Debug("GetFileResource", "req", req)
-	panic("impl me")
+	if req.FileEntry == nil {
+		return nil, fmt.Errorf("can get file info")
+	}
+	fileResource := &plugin.FileResource{
+		FileResourceData: []*plugin.FileResource_FileResourceData{},
+	}
+	fileItem := FileItem{}
+	err := json.Unmarshal(req.FileEntry.RawData, &fileItem)
+	if err != nil {
+		return nil, err
+	}
+	downInfo := &DownloadInfo{}
+	err = p.sendData(http.MethodGet, "/api/v1/file/download_info", map[string]string{
+		"fileId": fmt.Sprint(fileItem.FileId),
+	}, downInfo)
+	if err != nil {
+		return nil, err
+	}
+	fileResource.FileResourceData = append(fileResource.FileResourceData,
+		&plugin.FileResource_FileResourceData{
+			Url:          downInfo.DownloadUrl,
+			Resolution:   plugin.FileResource_Original,
+			ResourceType: plugin.FileResource_Video,
+		},
+	)
+
+	playerVideoResp := &PlayerVideoResponse{
+		UserTranscodeVideoList: []userTranscodeVideo{},
+	}
+
+	type ReqFileId struct {
+		FileId uint64 `json:"fileId"`
+	}
+
+	err = p.sendData(http.MethodPost, "/api/v1/transcode/video/result", map[string]uint64{
+		"fileId": fileItem.FileId,
+	}, playerVideoResp)
+	if err != nil {
+		return nil, err
+	}
+	for _, video := range playerVideoResp.UserTranscodeVideoList {
+		if video.Status != 255 || len(video.Files) == 0 {
+			continue
+		}
+		var res plugin.FileResource_Resolution
+		switch video.Resolution {
+		case "720P":
+			res = plugin.FileResource_HD
+		case "1080P":
+			res = plugin.FileResource_FHD
+		case "2160P":
+			res = plugin.FileResource_QHD
+
+		}
+		fileResource.FileResourceData = append(fileResource.FileResourceData,
+			&plugin.FileResource_FileResourceData{
+				Url:          video.Files[0].URL,
+				Resolution:   res,
+				ResourceType: plugin.FileResource_Video,
+			},
+		)
+	}
+	return fileResource, nil
+
 }
 
-func (p *PluginImpl) sendData(method string, uri string, reqData map[string]string, respData any) error {
-	var reqBody io.Reader
-	var queryStr string
+func (p *PluginImpl) sendData(method string, uri string, reqData any, respData any) error {
+	b := httpclient.NewBuilder().
+		Request(fmt.Sprintf("%s%s", PanURl, uri)).
+		SetMethod(method)
 	if reqData != nil {
 		if method == http.MethodGet {
-			u := url.Values{}
-			for k, v := range reqData {
-				u.Add(k, v)
+			for k, v := range reqData.(map[string]string) {
+				b = b.SetQueryParam(k, v)
 			}
-			queryStr = "?" + u.Encode()
 		} else {
-			reqBytes, err := json.Marshal(reqData)
-			if err != nil {
-				return err
-			}
-			reqBody = bytes.NewReader(reqBytes)
+			b = b.SetBody(reqData)
 		}
+	}
 
-	}
-	req, err := http.NewRequest(method, fmt.Sprintf("%s%s%s", PanURl, uri, queryStr), reqBody)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Platform", "open_platform")
+	b = b.SetHeader("Platform", "open_platform")
+
 	if p.authData != nil && p.authData.AccessToken != "" {
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", p.authData.AccessToken))
+		b = b.SetHeader("Authorization", fmt.Sprintf("Bearer %s", p.authData.AccessToken))
 	}
-	resp, err := p.client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
+
 	rsp := &Response{
 		Data: respData,
 	}
-	if err := json.NewDecoder(resp.Body).Decode(rsp); err != nil {
+	err := b.JSONResponse(&rsp)
+	if err != nil {
 		return err
 	}
 	if rsp.Code != 0 {
 		slog.Error("Request Failed", "code", rsp.Code, "message", rsp.Message)
-		return fmt.Errorf("Request Failed: %s", rsp.Message)
+		return errors.New(rsp.Message)
 	}
 	return nil
 }
