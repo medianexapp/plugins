@@ -1,7 +1,7 @@
 id = "123pan"
-Name = "123pan"
-desc = "123pan plugin desc"
+Name = "123Pan"
+desc = "123pan plugin"
 icon = "123pan.png"
-author = ["author@email.com"]
+author = ["labulakalia@email.com"]
 version = "v0.0.1"
 changelog = ["123pan plugin init"]

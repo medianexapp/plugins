@@ -20,7 +20,7 @@ type AuthToken struct {
 }
 
 type UserInfo struct {
-	UID      string `json:"uid"`
+	UID      int64  `json:"uid"`
 	Nickname string `json:"nickname"`
 }
 

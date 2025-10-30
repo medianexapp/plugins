@@ -11,8 +11,7 @@ import (
 	"github.com/medianexapp/plugin_api/httpclient"
 	"github.com/medianexapp/plugin_api/plugin"
 	"github.com/medianexapp/plugin_api/ratelimit"
-
-	_ "github.com/labulakalia/wazero_net/wasi/http" // if you need http import this
+	// _ "github.com/labulakalia/wazero_net/wasi/http" // if you need http import this
 )
 
 type PluginImpl struct {
@@ -29,8 +28,8 @@ func NewPluginImpl() *PluginImpl {
 	return &PluginImpl{
 		client: httpclient.NewClient(),
 		authData: &AuthToken{
-			ClientId:     &plugin.Formdata_FormItem_StringValue{},
-			ClientSecret: &plugin.Formdata_FormItem_StringValue{},
+			ClientId:     plugin.String(""),
+			ClientSecret: plugin.String(""),
 		},
 		ratelimit: ratelimit.New(map[string]ratelimit.LimitConfig{
 			"api/v1/user/info": {Limit: 1, Duration: time.Second},
@@ -87,7 +86,6 @@ func (p *PluginImpl) CheckAuthMethod(authMethod *plugin.AuthMethod) (*plugin.Aut
 		}
 		p.authData.ClientId = accessToken.ClientId
 		p.authData.ClientSecret = accessToken.ClientSecret
-
 	case *plugin.AuthMethod_Formdata:
 		formItems := v.Formdata.FormItems
 		p.authData.ClientId = formItems[0].Value.(*plugin.Formdata_FormItem_StringValue)
@@ -97,12 +95,15 @@ func (p *PluginImpl) CheckAuthMethod(authMethod *plugin.AuthMethod) (*plugin.Aut
 		"clientID":     p.authData.ClientId.StringValue.Value,
 		"clientSecret": p.authData.ClientSecret.StringValue.Value,
 	}
-	respData := AuthToken{}
+	respData := AuthToken{
+		ClientId:     p.authData.ClientId,
+		ClientSecret: p.authData.ClientSecret,
+	}
 	err := p.sendData(http.MethodPost, "/api/v1/access_token", reqData, &respData)
 	if err != nil {
 		return nil, err
 	}
-	tt, err := time.Parse("2006-01-02T15:04:05+07:00", respData.ExpiredAt)
+	tt, err := time.Parse("2006-01-02T15:04:05+08:00", respData.ExpiredAt)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +141,7 @@ func (p *PluginImpl) CheckAuthData(authDataBytes []byte) error {
 // PluginAuthId implements IPlugin.
 // plugin auth id,you can generate id by md5 or sha
 func (p *PluginImpl) PluginAuthId() (string, error) {
-	return p.userInfo.UID, nil
+	return fmt.Sprint(p.userInfo.UID), nil
 }
 
 // GetDirEntry implements IPlugin.
@@ -174,6 +175,7 @@ func (p *PluginImpl) GetDirEntry(req *plugin.GetDirEntryRequest) (*plugin.DirEnt
 	resp := FileListResponse{
 		FileList: []FileItem{},
 	}
+	slog.Info("send request", "params", params)
 	err := p.sendData(http.MethodGet, "/api/v2/file/list", params, &resp)
 	if err != nil {
 		return nil, err
@@ -183,6 +185,9 @@ func (p *PluginImpl) GetDirEntry(req *plugin.GetDirEntryRequest) (*plugin.DirEnt
 		DirPageKey:  fmt.Sprint(resp.FileList),
 	}
 	for _, fileItem := range resp.FileList {
+		if fileItem.Trashed == 1 {
+			continue
+		}
 		fileEntry := &plugin.FileEntry{
 			Name: fileItem.FileName,
 			Size: fileItem.Size,
@@ -261,13 +266,14 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 		}
 		var res plugin.FileResource_Resolution
 		switch video.Resolution {
+		case "480P":
+			res = plugin.FileResource_SD
 		case "720P":
 			res = plugin.FileResource_HD
 		case "1080P":
 			res = plugin.FileResource_FHD
 		case "2160P":
 			res = plugin.FileResource_QHD
-
 		}
 		fileResource.FileResourceData = append(fileResource.FileResourceData,
 			&plugin.FileResource_FileResourceData{
@@ -284,7 +290,8 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 func (p *PluginImpl) sendData(method string, uri string, reqData any, respData any) error {
 	b := httpclient.NewBuilder().
 		Request(fmt.Sprintf("%s%s", PanURl, uri)).
-		SetMethod(method)
+		SetMethod(method).
+		SetHeader("Content-Type", "application/json")
 	if reqData != nil {
 		if method == http.MethodGet {
 			for k, v := range reqData.(map[string]string) {
@@ -304,7 +311,7 @@ func (p *PluginImpl) sendData(method string, uri string, reqData any, respData a
 	rsp := &Response{
 		Data: respData,
 	}
-	err := b.JSONResponse(&rsp)
+	err := b.JSONResponse(rsp)
 	if err != nil {
 		return err
 	}
