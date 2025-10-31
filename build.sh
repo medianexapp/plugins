@@ -1,34 +1,73 @@
 #!/bin/bash
 set -ex
 
+REPO=medianexapp/plugins
+
 function version_gt() { test "$(echo "$@" | tr " " "\n" | sort -V | head -n 1)" != "$1"; }
 
+
+function upload_plugin_file() {
+    release=$1
+    upload_file=$2
+    RESULT=$(curl -X 'GET' \
+      "https://api.cnb.cool/$REPO/-/releases/tags/$release" \
+      -H 'accept: application/json' \
+      -H "Authorization: $CNB_TOKEN")
+    echo $RESULT
+    if echo $RESULT | grep -q errcode; then
+        echo "Release $release does not exist"
+        commitID=$(git log --oneline  | head -1| awk '{print $1}')
+        curl -X 'POST' \
+          "https://api.cnb.cool/$REPO/-/releases" \
+          -H 'accept: application/json' \
+          -H "Authorization: $CNB_TOKEN" \
+          -H 'Content-Type: application/json' \
+          -d "{\"name\": \"$release\",\"tag_name\": \"$release\",\"target_commitish\": \"$commitID\"}"
+        echo "Release $release created"
+    fi
+    docker run --rm \
+        -e TZ=Asia/Shanghai \
+        -e CNB_TOKEN=$CNB_TOKEN \
+        -e CNB_API_ENDPOINT='https://api.cnb.cool' \
+        -e CNB_WEB_ENDPOINT='https://cnb.cool' \
+        -e CNB_REPO_SLUG=$REPO \
+        -e PLUGIN_TAG=$version \
+        -e PLUGIN_ATTACHMENTS=$1/dist/$1_$version.zip \
+        -v $(pwd):$(pwd) \
+        -w $(pwd) \
+        cnbcool/attachments:latest
+}
+
 function build() {
-    version=`grep ^version $1/plugin.toml|awk -F'"' '{print $2}'`
-    echo "$1 current version: "$version
-    remoteVersion=`curl -s  ${SERVER_ADDR}/api/get_plugin_version/$1`
-    echo "$1 remote version: "$remoteVersion
+    dir=$1
+    version=`grep ^version $dir/plugin.toml|awk -F'"' '{print $2}'`
+    echo "$dir current version: "$version
+    remoteVersion=`curl -s  ${SERVER_ADDR}/api/get_plugin_version/$dir`
+    echo "$dir remote version: "$remoteVersion
     needUpload=0
     if [[ -z $remoteVersion ]];then
-        echo "$1 remote version is empty"
+        echo "$dir remote version is empty"
         needUpload=1
     else
         if version_gt $version $remoteVersion; then
-           echo "$1 $version is greater than $remoteVersion"
+           echo "$dir $version is greater than $remoteVersion"
            needUpload=1
         else 
-           echo "$1 version not change"
+           echo "$dir version not change"
            needUpload=0
         fi
     fi
     if [[ $needUpload -eq 1 ]];then
-        echo "start build plugin $1"
-        make -C $1
-        curl -X POST "${SERVER_ADDR}/api/upload_plugin" \
-            -H 'Content-Type: application/zip' \
-            -H "SecretKey: ${SECRET_KEY}" \
-            --data-binary @"$1/dist/$1_$version.zip"
+        echo "start build plugin $dir"
+        make -C $dir
+        upload_plugin_file $version $dir/dist/$dir_$version.zip
+        # curl -X POST "${SERVER_ADDR}/api/upload_plugin" \
+        #     -H 'Content-Type: application/zip' \
+        #     -H "SecretKey: ${SECRET_KEY}" \
+        #     --data-binary @"$1/dist/$1_$version.zip"
     fi
+    
+
 }
 
 if [[ -z $SERVER_ADDR ]];then
