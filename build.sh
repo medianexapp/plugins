@@ -1,6 +1,6 @@
 #!/bin/bash
-set -ex
-
+set -e
+source .env
 REPO=medianexapp/plugins
 
 function version_gt() { test "$(echo "$@" | tr " " "\n" | sort -V | head -n 1)" != "$1"; }
@@ -9,15 +9,13 @@ function version_gt() { test "$(echo "$@" | tr " " "\n" | sort -V | head -n 1)" 
 function upload_plugin_file() {
     release=$1
     upload_file=$2
-    RESULT=$(curl -X 'GET' \
+    RESULT=$(curl -s -X 'GET' \
       "https://api.cnb.cool/$REPO/-/releases/tags/$release" \
       -H 'accept: application/json' \
       -H "Authorization: $CNB_TOKEN")
-    echo $RESULT
     if echo $RESULT | grep -q errcode; then
-        echo "Release $release does not exist"
         commitID=$(git log --oneline  | head -1| awk '{print $1}')
-        curl -X 'POST' \
+        curl -s -X 'POST' \
           "https://api.cnb.cool/$REPO/-/releases" \
           -H 'accept: application/json' \
           -H "Authorization: $CNB_TOKEN" \
@@ -31,8 +29,8 @@ function upload_plugin_file() {
         -e CNB_API_ENDPOINT='https://api.cnb.cool' \
         -e CNB_WEB_ENDPOINT='https://cnb.cool' \
         -e CNB_REPO_SLUG=$REPO \
-        -e PLUGIN_TAG=$version \
-        -e PLUGIN_ATTACHMENTS=$1/dist/$1_$version.zip \
+        -e PLUGIN_TAG=$release \
+        -e PLUGIN_ATTACHMENTS=$upload_file \
         -v $(pwd):$(pwd) \
         -w $(pwd) \
         cnbcool/attachments:latest
@@ -60,11 +58,19 @@ function build() {
     if [[ $needUpload -eq 1 ]];then
         echo "start build plugin $dir"
         make -C $dir
-        upload_plugin_file $version $dir/dist/$dir_$version.zip
-        # curl -X POST "${SERVER_ADDR}/api/upload_plugin" \
-        #     -H 'Content-Type: application/zip' \
-        #     -H "SecretKey: ${SECRET_KEY}" \
-        #     --data-binary @"$1/dist/$1_$version.zip"
+        iconFile=$(grep icon ${dir}/plugin.toml|awk -F'"' '{print $2}')
+        id=$dir/$(grep "id =" ${dir}/plugin.toml|awk -F'"' '{print $2}')
+        upload_plugin_file $version $dir/dist/${id}.zip
+        upload_plugin_file $version $dir/$iconFile
+        plugin_file_url="https://cnb.cool/$REPO/-/releases/download/$version/$id.zip"
+        icon_url="https://cnb.cool/$REPO/-/releases/download/$version/$iconFile"
+        tomlConfig=$(cat $dir/plugin.toml)
+        tomlConfig+="\nplugin_file_url = \"$plugin_file_url\""
+        tomlConfig+="\nicon_url = \"$icon_url\""
+        curl -X POST "${SERVER_ADDR}/api/release_plugin_version" \
+            -H 'Content-Type: application/toml' \
+            -H "SecretKey: ${SECRET_KEY}" \
+            -d "$tomlConfig"
     fi
     
 
@@ -79,7 +85,7 @@ if [[ -z $SECRET_KEY ]];then
     exit 1
 fi
 echo "{\"server_addr\": \"${SERVER_ADDR}\"}" > util/env.json
-
+return
 for id in `ls -d */ | grep -v 'util' | grep -v smb | grep -v sftp |sed 's/\///g'`
 do
     build $id
