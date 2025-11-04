@@ -5,7 +5,6 @@ REPO=medianexapp/plugins
 
 function version_gt() { test "$(echo "$@" | tr " " "\n" | sort -V | head -n 1)" != "$1"; }
 
-
 function upload_plugin_file() {
     release=$1
     upload_file=$2
@@ -41,6 +40,10 @@ function build() {
     version=`grep ^version $dir/plugin.toml|awk -F'"' '{print $2}'`
     echo "$dir current version: "$version
     remoteVersion=`curl -s  ${SERVER_ADDR}/api/get_plugin_version/$dir`
+    if [[ $? -ne 0 ]]; then
+        echo "Failed to get $dir remote version"
+        exit 1
+    fi
     echo "$dir remote version: "$remoteVersion
     needUpload=0
     if [[ -z $remoteVersion ]];then
@@ -59,22 +62,24 @@ function build() {
         echo "start build plugin $dir"
         make -C $dir
         iconFile=$(grep icon ${dir}/plugin.toml|awk -F'"' '{print $2}')
-        id=$dir/$(grep "id =" ${dir}/plugin.toml|awk -F'"' '{print $2}')
+        id=$(grep "id =" ${dir}/plugin.toml|awk -F'"' '{print $2}')
         upload_plugin_file $version $dir/dist/${id}.zip
         upload_plugin_file $version $dir/$iconFile
         plugin_file_url="https://cnb.cool/$REPO/-/releases/download/$version/$id.zip"
         icon_url="https://cnb.cool/$REPO/-/releases/download/$version/$iconFile"
-        tomlConfig=$(cat $dir/plugin.toml)
-        tomlConfig+="\nplugin_file_url = \"$plugin_file_url\""
-        tomlConfig+="\nicon_url = \"$icon_url\""
+        # cat $dir/plugin.toml
+        
+        tomlConfig=`cat $dir/plugin.toml`
+        tomlConfig=$tomlConfig"\nplugin_file_url = \"$plugin_file_url\""
+        tomlConfig=$tomlConfig"\nicon_url = \"$icon_url\""
+        tomlData=$(echo -e "$tomlConfig")
         curl -X POST "${SERVER_ADDR}/api/release_plugin_version" \
             -H 'Content-Type: application/toml' \
             -H "SecretKey: ${SECRET_KEY}" \
-            -d "$tomlConfig"
+            -d "$tomlData"
     fi
-    
-
 }
+
 
 if [[ -z $SERVER_ADDR ]];then
     echo "vars SERVER_ADDR is empty"
@@ -85,7 +90,6 @@ if [[ -z $SECRET_KEY ]];then
     exit 1
 fi
 echo "{\"server_addr\": \"${SERVER_ADDR}\"}" > util/env.json
-return
 for id in `ls -d */ | grep -v 'util' | grep -v smb | grep -v sftp |sed 's/\///g'`
 do
     build $id

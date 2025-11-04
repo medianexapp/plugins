@@ -1,0 +1,7 @@
+id = "openlist"
+Name = "OpenList"
+desc = "support openlist"
+icon = "openlist.png"
+author = ["labulakalia@gmail.com"]
+version = "v0.0.2"
+changelog = ["init openlist"]
