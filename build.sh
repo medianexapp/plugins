@@ -90,6 +90,7 @@ if [[ -z $SECRET_KEY ]];then
     exit 1
 fi
 echo "{\"server_addr\": \"${SERVER_ADDR}\"}" > util/env.json
+# not support smb sftp protocol
 for id in `ls -d */ | grep -v 'util' | grep -v smb | grep -v sftp |sed 's/\///g'`
 do
     build $id
