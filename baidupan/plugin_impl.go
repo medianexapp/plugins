@@ -155,6 +155,7 @@ func (p *PluginImpl) CheckAuthMethod(authMethod *plugin.AuthMethod) (authData *p
 func (p *PluginImpl) sendData(uri string, u url.Values, resp any) error {
 	u.Add("access_token", p.token.AccessToken)
 	reqUrl := fmt.Sprintf("%s%s?%s", BaiduPanURL, uri, u.Encode())
+	slog.Info("send request data", "url", reqUrl)
 	reqResp, err := p.client.Get(reqUrl)
 	if err != nil {
 		slog.Error("request url failed", "req", reqUrl)
@@ -216,6 +217,7 @@ func (p *PluginImpl) GetDirEntry(req *plugin.GetDirEntryRequest) (*plugin.DirEnt
 	u.Add("order", "name")
 	u.Add("desc", "1")
 	u.Add("start", fmt.Sprint((req.Page-1)*req.PageSize))
+	u.Add("limit", fmt.Sprint(req.PageSize))
 	resp := &FileListResponse{
 		List: []*FileListItem{},
 	}
