@@ -12,6 +12,7 @@ import (
 	"syscall"
 
 	"github.com/labulakalia/wazero_net/util"
+	"github.com/medianexapp/plugin_api"
 	"github.com/medianexapp/plugin_api/plugin"
 )
 
@@ -22,6 +23,7 @@ NOTE: net and http use package
 */
 
 type PluginImpl struct {
+	plugin_api.IPlugin
 	localpath *plugin.Formdata_FormItem_DirPathValue
 	uPath     string
 }

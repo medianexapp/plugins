@@ -1,7 +1,6 @@
 package main
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/medianexapp/plugin_api/plugin"
@@ -9,10 +8,16 @@ import (
 
 func TestPluginImpl(t *testing.T) {
 	p := NewPluginImpl()
-	auth, _ := p.GetAuth()
-	method := auth.AuthMethods[0].Method
-	method = method // &lt;= save auth data
-	 
+
+	p.embyAuth.Addr.StringValue.Value = "https://emby.bangumi.ca"
+	p.embyAuth.User.StringValue.Value = "labulakalia"
+	p.embyAuth.Password.ObscureStringValue.Value = "Ww123456@"
+
+	auth, err := p.GetAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	authData, err := p.CheckAuthMethod(&plugin.AuthMethod{
 		Method: auth.AuthMethods[0].Method,
 	})
@@ -23,30 +28,80 @@ func TestPluginImpl(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp, err := p.GetDirEntry(&plugin.GetDirEntryRequest{
-		Path:     "/",
-		Page:     1,
-		PageSize: 100,
-	})
+
+	// 1. Test GetPluginMenus
+	menus, err := p.GetPluginMenus()
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, fileEntry := range resp.FileEntries {
-		if fileEntry.FileType != plugin.FileEntry_FileTypeFile {
-			continue
+	if len(menus.GetPluginMenus()) == 0 {
+		t.Fatal("no menus returned")
+	}
+	t.Logf("menus %+v\n", menus.GetPluginMenus())
+	// 2. Test ListPluginMediaItemInfo - pick first menu that has items
+	var listResp *plugin.ListPluginMediaInfoResponse
+	for _, menu := range menus.GetPluginMenus() {
+		m := menu.Menu
+		resp, err := p.ListPluginMediaItemInfo(&plugin.ListPluginMediaInfoRequest{
+			Menu:     m,
+			Page:     1,
+			PageSize: 5,
+		})
+		if err != nil {
+			t.Fatalf("ListPluginMediaItemInfo for menu '%s' failed: %v", m.GetName(), err)
 		}
-		t.Log("file entry name", fileEntry.Name)
-		// if is movie get file resource
-		if strings.HasSuffix(fileEntry.Name, "mp4") || strings.HasSuffix(fileEntry.Name, "mkv") {
-			fileResource, err := p.GetFileResource(&plugin.GetFileResourceRequest{
-				FilePath:  "/" + fileEntry.Name,
-				FileEntry: fileEntry,
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-			t.Logf("get file %s fileResource %+v", fileEntry.Name, fileResource.FileResourceData)
+		if len(resp.GetMediaInfos()) > 0 {
+			listResp = resp
+			t.Logf("found %d items in menu '%s'", len(resp.GetMediaInfos()), m.GetName())
+			break
 		}
 	}
-	return
+	if listResp == nil {
+		t.Fatal("no menu returned any items")
+	}
+
+	// 3. Test GetPluginMediaItemDetail
+	firstMedia := listResp.GetMediaInfos()[0]
+	detail, err := p.GetPluginMediaItemDetail(&plugin.GetPluginMediaDetailRequest{
+		MediaInfoId: firstMedia.GetMediaId(),
+	})
+	if err != nil {
+		t.Fatalf("GetPluginMediaItemDetail for '%s' failed: %v", firstMedia.GetMediaId(), err)
+	}
+	t.Logf("detail for '%s' (type=%v): series=%v info=%v items=%d",
+		firstMedia.GetName(), firstMedia.GetMediaType(),
+		detail.GetMediaSeries() != nil,
+		detail.GetMediaInfo() != nil,
+		len(detail.GetMediaItems()))
+
+	// 4. Search test
+	searchResp, err := p.ListPluginMediaItemInfo(&plugin.ListPluginMediaInfoRequest{
+		SearchName: "鱿鱼游戏",
+		Page:       1,
+		PageSize:   5,
+	})
+	if err != nil {
+		t.Fatalf("search failed: %v", err)
+	}
+	t.Logf("search results: %d", len(searchResp.GetMediaInfos()))
+
+	// 5. GetFileResource
+	fileResource, err := p.GetFileResource(&plugin.GetFileResourceRequest{
+		FilePath:    firstMedia.GetMediaId(),
+		IsMedia:     true,
+		MediaPlayId: firstMedia.GetMediaId(),
+	})
+	if err != nil {
+		t.Fatalf("GetFileResource failed: %v", err)
+	}
+	t.Logf("file resources: %d", len(fileResource.GetFileResourceData()))
+
+	// 6. GetPluginFilterItems
+	filterItems, err := p.GetPluginFilterItems(&plugin.PluginItem{Name: "test", Value: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("filter items: %d filters", len(filterItems.GetFilters()))
+
+	t.Log("ALL TESTS PASSED")
 }

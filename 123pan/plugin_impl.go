@@ -9,12 +9,14 @@ import (
 	"time"
 
 	_ "github.com/labulakalia/wazero_net/wasi/http"
+	"github.com/medianexapp/plugin_api"
 	"github.com/medianexapp/plugin_api/httpclient"
 	"github.com/medianexapp/plugin_api/plugin"
 	"github.com/medianexapp/plugin_api/ratelimit"
 )
 
 type PluginImpl struct {
+	plugin_api.IPlugin
 	authData  *AuthToken
 	client    *httpclient.Client
 	userInfo  *UserInfo
@@ -289,7 +291,7 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 
 func (p *PluginImpl) sendData(method string, uri string, reqData any, respData any) error {
 	b := httpclient.NewBuilder().
-		Request(fmt.Sprintf("%s%s", PanURl, uri)).
+		SetURL(fmt.Sprintf("%s%s", PanURl, uri)).
 		SetMethod(method).
 		SetHeader("Content-Type", "application/json")
 	if reqData != nil {

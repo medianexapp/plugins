@@ -8,11 +8,13 @@ import (
 	"github.com/labulakalia/wazero_net/util"
 	_ "github.com/labulakalia/wazero_net/wasi/http"
 	"github.com/medianexapp/gowebdav"
+	"github.com/medianexapp/plugin_api"
 	"github.com/medianexapp/plugin_api/httpclient"
 	"github.com/medianexapp/plugin_api/plugin"
 )
 
 type PluginImpl struct {
+	plugin_api.IPlugin
 	webDavAuth *webDavAuth
 
 	client     *gowebdav.Client

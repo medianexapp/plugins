@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/medianexapp/plugin_api"
 	"github.com/medianexapp/plugin_api/httpclient"
 
 	"github.com/medianexapp/plugin_api/plugin"
@@ -19,6 +20,7 @@ import (
 )
 
 type PluginImpl struct {
+	plugin_api.IPlugin
 	authData *AuthData
 	client   *httpclient.Client
 }

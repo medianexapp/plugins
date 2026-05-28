@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 
 	_ "github.com/labulakalia/wazero_net/wasi/http" // if you need http import this
+	"github.com/medianexapp/plugin_api"
 	"github.com/medianexapp/plugin_api/httpclient"
 	"github.com/medianexapp/plugin_api/plugin"
 	"github.com/medianexapp/plugin_api/ratelimit"
@@ -30,6 +31,7 @@ const (
 )
 
 type PluginImpl struct {
+	plugin_api.IPlugin
 	cookies   []*http.Cookie
 	client    *httpclient.Client
 	hb        *httpclient.Builder
@@ -421,7 +423,7 @@ func (p *PluginImpl) request(uri string, method string, u url.Values, reqData, r
 		u = url.Values{}
 	}
 	p.ratelimit.Wait("")
-	cb := p.hb.SetCookies(p.cookies).SetQueryParams(u).SetMethod(method).Request(fmt.Sprintf("%s%s", api, uri))
+	cb := p.hb.SetCookies(p.cookies).SetQueryParams(u).SetMethod(method).SetURL(fmt.Sprintf("%s%s", api, uri))
 	var body io.Reader
 	if reqData != nil {
 		data, err := json.Marshal(reqData)

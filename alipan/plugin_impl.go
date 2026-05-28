@@ -20,6 +20,7 @@ import (
 	"time"
 
 	_ "github.com/labulakalia/wazero_net/wasi/http"
+	"github.com/medianexapp/plugin_api"
 	"github.com/medianexapp/plugin_api/plugin"
 	"github.com/medianexapp/plugin_api/ratelimit"
 )
@@ -31,6 +32,7 @@ NOTE: net and http use package
 */
 
 type PluginImpl struct {
+	plugin_api.IPlugin
 	oauthServerURL string
 
 	token                 *plugin.Token

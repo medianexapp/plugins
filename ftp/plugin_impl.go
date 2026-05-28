@@ -14,6 +14,7 @@ import (
 	"github.com/labulakalia/wazero_net/util"
 	wasi_net "github.com/labulakalia/wazero_net/wasi/net"
 	"github.com/medianexapp/ftp"
+	"github.com/medianexapp/plugin_api"
 	"github.com/medianexapp/plugin_api/plugin"
 )
 
@@ -24,6 +25,7 @@ NOTE: net and http use package
 */
 
 type PluginImpl struct {
+	plugin_api.IPlugin
 	ftpAuth *ftpAuth
 	ftpConn *ftp.ServerConn
 }

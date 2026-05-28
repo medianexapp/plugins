@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/medianexapp/plugin_api"
 	"github.com/medianexapp/plugin_api/plugin"
 	"github.com/medianexapp/sftp"
 	"golang.org/x/crypto/ssh"
@@ -26,6 +27,7 @@ NOTE: net and http use package
 */
 
 type PluginImpl struct {
+	plugin_api.IPlugin
 	sftpClient *sftp.Client
 
 	sftpAuth *sftpAuth
