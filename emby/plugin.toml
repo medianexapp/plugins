@@ -1,0 +1,7 @@
+id = "emby"
+Name = "emby"
+desc = "emby plugin desc"
+icon = "emby.png"
+author = ["author@email.com"]
+version = "v0.0.1"
+changelog = ["emby plugin init"]

@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -ex
 source .env
 REPO=medianexapp/plugins
 
@@ -39,11 +39,11 @@ function build() {
     dir=$1
     version=`grep ^version $dir/plugin.toml|awk -F'"' '{print $2}'`
     echo "$dir current version: "$version
-    res=`curl -s -w "CODE:%{http_code}\n" ${SERVER_ADDR}/api/get_plugin_version/$dir`
-    code=$(echo $res | grep CODE|awk -F':' '{print $2}')
+    res=`curl -s -w "\nCODE:%{http_code}\n" ${SERVER_ADDR}/api/get_plugin_version/$dir`
+    code=$(echo "$res" | grep CODE|awk -F':' '{print $2}')
     remoteVersion=""
     if [[ $code -eq 200 ]]; then
-        remoteVersion=$(echo $res | grep -v CODE| tr -d '[:space:]')
+        remoteVersion=$(echo "$res" | grep -v CODE| tr -d '[:space:]')
     fi
     echo "$dir remote version: "$remoteVersion
     needUpload=0

@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/medianexapp/plugin_api/httpclient"
 	"github.com/medianexapp/plugin_api/plugin"
@@ -27,7 +28,7 @@ var (
 	getAuthTokenUri    = "/api/get_auth_token"
 	getAuthQrcodeUri   = "/api/get_auth_qrcode_v2"
 	checkAuthQrcodeUri = "/api/check_auth_qrcode"
-	HttpClient         = httpclient.NewClient()
+	HttpClient         = httpclient.NewClient(httpclient.WithTimeout(time.Second * 10))
 )
 
 func GetAuthAddr(pluginId string) string {
@@ -118,6 +119,7 @@ func GetAuthQrcode(id string) ([]byte, error) {
 
 func CheckAuthQrcode(id, key string) (*plugin.Token, error) {
 	url := fmt.Sprintf("%s%s?id=%s&key=%s", ServerAddr, checkAuthQrcodeUri, id, key)
+	slog.Info("chec auth qrcode", "url", url)
 	resp, err := HttpClient.Get(url)
 	if err != nil {
 		return nil, err
@@ -130,7 +132,7 @@ func CheckAuthQrcode(id, key string) (*plugin.Token, error) {
 	if err != nil {
 		return nil, err
 	}
-	slog.Info("get qrcode data", "id", id, "resp", string(respBytes))
+	slog.Info("get qrcode data", "id", id, "url", url, "resp", string(respBytes))
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("get auth qrcode failed: %s", respBytes)
 	}
