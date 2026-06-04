@@ -1,3 +1,5 @@
+github.com/antihax/optional v1.0.0 h1:xK2lYat7ZLaVVcIuj82J8kIro4V6kDe0AUDFboUCwcg=
+github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
 github.com/aperturerobotics/json-iterator-lite v1.0.0 h1:cihbrYWoK/S2RYXhJLpDZd+GUjVvFJN+D3w1VOqqHRI=
 github.com/aperturerobotics/json-iterator-lite v1.0.0/go.mod h1:snaApCEDtrHHP6UWSLKiYNOZU9A5NyzccKenx9oZEzg=
 github.com/aperturerobotics/protobuf-go-lite v0.12.2 h1:ujwTKgpIYAVsv8VljB6PPMY5SI8i8m/NlIHAkkuxQcU=
@@ -46,8 +48,6 @@ github.com/medianexapp/go-smb2 v0.0.0-20250425112922-92edacdefca5 h1:rPMPOK4foIu
 github.com/medianexapp/go-smb2 v0.0.0-20250425112922-92edacdefca5/go.mod h1:j1QjZnoXKXrjkAOXeeWekE6ymSdCxWCHP4s4sF9PqPw=
 github.com/medianexapp/gowebdav v0.0.0-20250425112725-41a667437dfa h1:kKNtHeFLc8JRMc/Jol041krGY4JffYAWmGPzY8yZd5s=
 github.com/medianexapp/gowebdav v0.0.0-20250425112725-41a667437dfa/go.mod h1:UIu++AGXNUdvdqC2u746o78TGTmeG03n1TNPfLoLe6k=
-github.com/medianexapp/plugin_api v0.0.31 h1:f+aspELP4nMi8OdC2wLkVoGLnJcTZGf2KjcqzHFCYas=
-github.com/medianexapp/plugin_api v0.0.31/go.mod h1:TqjZrkKEFo2UooZkkCQSJ9rj6W5tP9SOSJUZeFYKw7E=
 github.com/medianexapp/plugin_api v0.0.35-0.20260526124424-04e3548a0bf1 h1:Ls+9mk3lwFyOUDR73iLbKOzDzFM637Xz1sB40L9Wkvc=
 github.com/medianexapp/plugin_api v0.0.35-0.20260526124424-04e3548a0bf1/go.mod h1:TqjZrkKEFo2UooZkkCQSJ9rj6W5tP9SOSJUZeFYKw7E=
 github.com/medianexapp/sftp v1.13.10-0.20250425113120-4ffdd4c8163a h1:a1AMBh4Glxjl8gb9JW1kJ1W92cgBBkLlnZHCOAPBjQg=
@@ -80,8 +80,12 @@ golang.org/x/net v0.6.0/go.mod h1:2Tu9+aMcznHK/AK1HMvgo6xiTLG5rD5rZLDS+rp2Bjs=
 golang.org/x/net v0.7.0/go.mod h1:2Tu9+aMcznHK/AK1HMvgo6xiTLG5rD5rZLDS+rp2Bjs=
 golang.org/x/net v0.39.0 h1:ZCu7HMWDxpXpaiKdhzIfaltL9Lp31x/3fCP11bc6/fY=
 golang.org/x/net v0.39.0/go.mod h1:X7NRbYVEA+ewNkCNyJ513WmMdQ3BineSwVtN2zD/d+E=
+golang.org/x/oauth2 v0.36.0 h1:peZ/1z27fi9hUOFCAZaHyrpWG5lwe0RJEEEeH0ThlIs=
+golang.org/x/oauth2 v0.36.0/go.mod h1:YDBUJMTkDnJS+A4BP4eZBjCqtokkg1hODuPjwiGPO7Q=
 golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+golang.org/x/sync v0.20.0 h1:e0PTpb7pjO8GAtTs2dQ6jYa5BWYlMuX047Dco/pItO4=
+golang.org/x/sync v0.20.0/go.mod h1:9xrNwdLfx4jkKbNva9FpL6vEN7evnE43NNNJQ2LF3+0=
 golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20201119102817-f84b799fce68/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=

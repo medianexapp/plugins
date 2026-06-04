@@ -8,12 +8,12 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 
 	"github.com/labulakalia/wazero_net/util"
 	_ "github.com/labulakalia/wazero_net/wasi/http"
 	"github.com/medianexapp/plugin_api/plugin"
+	"golang.org/x/sync/errgroup"
 )
 
 type PluginImpl struct {
@@ -229,38 +229,104 @@ func (p *PluginImpl) GetPluginMenus() (*plugin.PluginMenus, error) {
 // For Emby, it returns genre filters available under a parent view.
 func (p *PluginImpl) GetPluginFilterItems(subItem *plugin.PluginItem) (*plugin.PluginFilterItems, error) {
 	slog.Info("GetPluginFilterItems", "name", subItem.GetName(), "value", subItem.GetValue())
-
-	parentId := subItem.GetValue()
-	if parentId == "" {
-		return &plugin.PluginFilterItems{
-			Filters: []*plugin.PluginFilterItems_Filter{},
-		}, nil
-	}
-
-	genres, err := p.getGenres(parentId)
-	if err != nil {
-		slog.Error("getGenres failed", "parentId", parentId, "err", err)
-		return &plugin.PluginFilterItems{
-			Filters: []*plugin.PluginFilterItems_Filter{},
-		}, nil
-	}
-
-	items := make([]*plugin.PluginItem, 0, len(genres))
-	for _, genre := range genres {
-		items = append(items, &plugin.PluginItem{
-			Name:  genre.Name,
-			Value: fmt.Sprintf("parentId=%s&GenreIds=%s", parentId, genre.Id),
-		})
-	}
-
-	return &plugin.PluginFilterItems{
+	filterItems := &plugin.PluginFilterItems{
 		Filters: []*plugin.PluginFilterItems_Filter{
 			{
-				Name:  "Genre",
-				Items: items,
+				Name:  "分类",
+				Items: make([]*plugin.PluginItem, 0, 20),
+			},
+			{
+				Name:  "年份",
+				Items: make([]*plugin.PluginItem, 0, 20),
+			},
+			{
+				Name:  "分级",
+				Items: make([]*plugin.PluginItem, 0, 20),
+			},
+			{
+				Name:  "标签",
+				Items: make([]*plugin.PluginItem, 0, 20),
+			},
+			{
+				Name:  "工作室",
+				Items: make([]*plugin.PluginItem, 0, 20),
 			},
 		},
-	}, nil
+	}
+	g := errgroup.Group{}
+	g.Go(func() error {
+		genres, err := p.getGenres(subItem.Value)
+		if err != nil {
+			return err
+		}
+		for _, item := range genres {
+			filterItems.Filters[0].Items = append(filterItems.Filters[0].Items, &plugin.PluginItem{
+				Name:  item.Name,
+				Value: item.Id,
+			})
+		}
+		return nil
+	})
+	g.Go(func() error {
+		years, err := p.getYears(subItem.Value)
+		if err != nil {
+			return err
+		}
+		for _, item := range years {
+			if item.Id == "" {
+				item.Id = item.Name
+			}
+			filterItems.Filters[1].Items = append(filterItems.Filters[1].Items, &plugin.PluginItem{
+				Name:  item.Name,
+				Value: item.Id,
+			})
+		}
+		return nil
+	})
+	g.Go(func() error {
+		officialRatings, err := p.getOfficialRatings(subItem.Value)
+		if err != nil {
+			return err
+		}
+		for _, item := range officialRatings {
+			if item.Id == "" {
+				item.Id = item.Name
+			}
+			filterItems.Filters[2].Items = append(filterItems.Filters[2].Items, &plugin.PluginItem{
+				Name:  item.Name,
+				Value: item.Id,
+			})
+		}
+		return nil
+	})
+	g.Go(func() error {
+		tags, err := p.getTags(subItem.Value)
+		if err != nil {
+			return err
+		}
+		for _, item := range tags {
+			filterItems.Filters[3].Items = append(filterItems.Filters[3].Items, &plugin.PluginItem{
+				Name:  item.Name,
+				Value: item.Id,
+			})
+		}
+		return nil
+	})
+	g.Go(func() error {
+		studios, err := p.getStudios(subItem.Value)
+		if err != nil {
+			return err
+		}
+		for _, item := range studios {
+			filterItems.Filters[3].Items = append(filterItems.Filters[4].Items, &plugin.PluginItem{
+				Name:  item.Name,
+				Value: item.Id,
+			})
+		}
+		return nil
+	})
+	g.Wait()
+	return filterItems, nil
 }
 
 // ListPluginMediaItemInfo lists media items (movies, series, episodes)
@@ -268,77 +334,47 @@ func (p *PluginImpl) GetPluginFilterItems(subItem *plugin.PluginItem) (*plugin.P
 // and text search.
 func (p *PluginImpl) ListPluginMediaItemInfo(req *plugin.ListPluginMediaInfoRequest) (*plugin.ListPluginMediaInfoResponse, error) {
 	slog.Info("ListPluginMediaItemInfo",
-		"searchName", req.GetSearchName(),
-		"page", req.GetPage(),
-		"pageSize", req.GetPageSize(),
+		"req", req,
 	)
 
-	page := req.GetPage()
-	pageSize := req.GetPageSize()
-	if pageSize == 0 {
-		pageSize = 20
-	}
+	pageSize := min(req.GetPageSize(), 50)
 
-	// Determine parent id from menu selection
-	parentId := ""
-	if menu := req.GetMenu(); menu != nil {
-		parentId = menu.GetValue()
-	}
-
-	// Extract filter parameters
-	genreIds := ""
-	if filters := req.GetFilters(); filters != nil {
-		for _, filter := range filters.GetFilters() {
-			for _, item := range filter.GetItems() {
-				value := item.GetValue()
-				// Parse "parentId=X&GenreIds=Y" format from sub-menu selection
-				values, _ := url.ParseQuery(value)
-				if v := values.Get("parentId"); v != "" {
-					parentId = v
-				}
-				if v := values.Get("GenreIds"); v != "" {
-					genreIds = v
-				}
-			}
+	params := url.Values{}
+	params.Set("StartIndex", fmt.Sprint((req.Page-1)*pageSize))
+	params.Set("Limit", fmt.Sprint(pageSize))
+	params.Set("ParentId", req.Menu.Value)
+	for _, filter := range req.Filters.Filters {
+		if len(filter.Items) == 0 {
+			continue
+		}
+		values := []string{}
+		for _, item := range filter.Items {
+			values = append(values, item.Value)
+		}
+		if filter.Name == "分类" {
+			params.Set("GenreIds", strings.Join(values, ","))
+		}
+		if filter.Name == "分级" {
+			params.Set("OfficialRatings", strings.Join(values, ","))
+		}
+		if filter.Name == "年份" {
+			params.Set("Years", strings.Join(values, ","))
+		}
+		if filter.Name == "标签" {
+			params.Set("TagIds", strings.Join(values, ","))
+		}
+		if filter.Name == "工作室" {
+			params.Set("StudioIds", strings.Join(values, ","))
 		}
 	}
-
-	// Build query params
-	params := url.Values{}
 	params.Set("SortBy", "SortName")
 	params.Set("SortOrder", "Ascending")
-	params.Set("Fields", "Overview,Genres,MediaSources,People,PrimaryImageAspectRatio")
-
-	searchName := req.GetSearchName()
-	if searchName != "" {
-		// Search across all items - use recursive to find all matches
-		params.Set("Recursive", "true")
-		params.Set("SearchTerm", searchName)
-		params.Set("IncludeItemTypes", "Movie,Series")
-		if parentId != "" {
-			params.Set("ParentId", parentId)
-		}
-	} else if parentId != "" {
-		// Browse within a specific parent
-		params.Set("ParentId", parentId)
-		startIndex := int((page - 1) * pageSize)
-		params.Set("StartIndex", strconv.Itoa(startIndex))
-	} else {
-		// No menu selected and no search - return empty result
-		return &plugin.ListPluginMediaInfoResponse{
-			MediaInfos:        []*plugin.PluginMedia{},
-			SupportSearchName: true,
-		}, nil
-	}
-
-	params.Set("Limit", strconv.FormatUint(pageSize, 10))
-	if genreIds != "" {
-		params.Set("GenreIds", genreIds)
-	}
-
+	// params.Set("Fields", "Overview,Genres,MediaSources,People,PrimaryImageAspectRatio")
 	apiUrl := fmt.Sprintf("/emby/Users/%s/Items?%s", p.userId, params.Encode())
 
-	itemsResp := &ItemsResponse{}
+	itemsResp := &ItemsResponse{
+		Items: []*EmbyItem{},
+	}
 	err := p.sendGet(apiUrl, nil, itemsResp)
 	if err != nil {
 		slog.Error("get items failed", "err", err)
@@ -347,23 +383,13 @@ func (p *PluginImpl) ListPluginMediaItemInfo(req *plugin.ListPluginMediaInfoRequ
 
 	mediaInfos := make([]*plugin.PluginMedia, 0, len(itemsResp.Items))
 	for _, item := range itemsResp.Items {
+		// TODO convert plugin media
 		mediaInfo := p.embyItemToPluginMedia(item)
 		mediaInfos = append(mediaInfos, mediaInfo)
 	}
-
 	resp := &plugin.ListPluginMediaInfoResponse{
-		MediaInfos:        mediaInfos,
-		SupportSearchName: true,
+		MediaInfos: mediaInfos,
 	}
-
-	// Set next page key for pagination
-	if itemsResp.TotalRecordCount > 0 {
-		nextStart := int((page-1)*pageSize) + len(itemsResp.Items)
-		if nextStart < itemsResp.TotalRecordCount {
-			resp.NextPageKey = strconv.Itoa(nextStart)
-		}
-	}
-
 	return resp, nil
 }
 
@@ -486,8 +512,8 @@ func (p *PluginImpl) doRequest(httpReq *http.Request, uri string, respBody inter
 	if err != nil {
 		return err
 	}
-
-	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+	slog.Info("doRequest finished", "uri", uri, "statusCode", httpResp.StatusCode, "body", string(bodyData))
+	if httpResp.StatusCode >= 400 {
 		slog.Error("emby api error", "uri", uri, "statusCode", httpResp.StatusCode, "body", string(bodyData))
 		return fmt.Errorf("emby api error: status=%d, body=%s", httpResp.StatusCode, string(bodyData))
 	}
@@ -503,9 +529,49 @@ func (p *PluginImpl) doRequest(httpReq *http.Request, uri string, respBody inter
 }
 
 // getGenres fetches available genres for a parent view.
-func (p *PluginImpl) getGenres(parentId string) ([]*EmbyItem, error) {
+func (p *PluginImpl) getGenres(parentId string) ([]*FilterItem, error) {
 	genresUrl := fmt.Sprintf("/emby/Genres?ParentId=%s&UserId=%s", parentId, p.userId)
-	resp := &GenresResponse{}
+	resp := &FilterItemsResponse{}
+	err := p.sendGet(genresUrl, nil, resp)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Items, nil
+}
+
+func (p *PluginImpl) getYears(parentId string) ([]*FilterItem, error) {
+	genresUrl := fmt.Sprintf("/emby/Years?ParentId=%s&UserId=%s", parentId, p.userId)
+	resp := &FilterItemsResponse{}
+	err := p.sendGet(genresUrl, nil, resp)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Items, nil
+}
+
+func (p *PluginImpl) getOfficialRatings(parentId string) ([]*FilterItem, error) {
+	genresUrl := fmt.Sprintf("/emby/OfficialRatings?ParentId=%s&UserId=%s", parentId, p.userId)
+	resp := &FilterItemsResponse{}
+	err := p.sendGet(genresUrl, nil, resp)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Items, nil
+}
+
+func (p *PluginImpl) getStudios(parentId string) ([]*FilterItem, error) {
+	genresUrl := fmt.Sprintf("/emby/Studios?ParentId=%s&UserId=%s", parentId, p.userId)
+	resp := &FilterItemsResponse{}
+	err := p.sendGet(genresUrl, nil, resp)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Items, nil
+}
+
+func (p *PluginImpl) getTags(parentId string) ([]*FilterItem, error) {
+	genresUrl := fmt.Sprintf("/emby/Tags?ParentId=%s&UserId=%s", parentId, p.userId)
+	resp := &FilterItemsResponse{}
 	err := p.sendGet(genresUrl, nil, resp)
 	if err != nil {
 		return nil, err

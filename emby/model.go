@@ -83,10 +83,15 @@ type UserResponse struct {
 	ServerName string `json:"ServerName"`
 }
 
-// GenresResponse represents the /Genres endpoint response
-type GenresResponse struct {
-	Items            []*EmbyItem `json:"Items"`
-	TotalRecordCount int         `json:"TotalRecordCount"`
+type FilterItem struct {
+	Name string `json:"Name"`
+	Id   string `json:"Id"`
+}
+
+// FilterItemsResponse represents the /Genres endpoint response
+type FilterItemsResponse struct {
+	Items            []*FilterItem `json:"Items"`
+	TotalRecordCount int           `json:"TotalRecordCount"`
 }
 
 type ErrResponse struct {
