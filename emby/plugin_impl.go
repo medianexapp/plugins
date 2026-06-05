@@ -343,33 +343,36 @@ func (p *PluginImpl) ListPluginMediaItemInfo(req *plugin.ListPluginMediaInfoRequ
 	params.Set("StartIndex", fmt.Sprint((req.Page-1)*pageSize))
 	params.Set("Limit", fmt.Sprint(pageSize))
 	params.Set("ParentId", req.Menu.Value)
-	for _, filter := range req.Filters.Filters {
-		if len(filter.Items) == 0 {
-			continue
-		}
-		values := []string{}
-		for _, item := range filter.Items {
-			values = append(values, item.Value)
-		}
-		if filter.Name == "分类" {
-			params.Set("GenreIds", strings.Join(values, ","))
-		}
-		if filter.Name == "分级" {
-			params.Set("OfficialRatings", strings.Join(values, ","))
-		}
-		if filter.Name == "年份" {
-			params.Set("Years", strings.Join(values, ","))
-		}
-		if filter.Name == "标签" {
-			params.Set("TagIds", strings.Join(values, ","))
-		}
-		if filter.Name == "工作室" {
-			params.Set("StudioIds", strings.Join(values, ","))
+	if req.Filters != nil {
+		for _, filter := range req.Filters.Filters {
+			if len(filter.Items) == 0 {
+				continue
+			}
+			values := []string{}
+			for _, item := range filter.Items {
+				values = append(values, item.Value)
+			}
+			if filter.Name == "分类" {
+				params.Set("GenreIds", strings.Join(values, ","))
+			}
+			if filter.Name == "分级" {
+				params.Set("OfficialRatings", strings.Join(values, ","))
+			}
+			if filter.Name == "年份" {
+				params.Set("Years", strings.Join(values, ","))
+			}
+			if filter.Name == "标签" {
+				params.Set("TagIds", strings.Join(values, ","))
+			}
+			if filter.Name == "工作室" {
+				params.Set("StudioIds", strings.Join(values, ","))
+			}
 		}
 	}
+
 	params.Set("SortBy", "SortName")
 	params.Set("SortOrder", "Ascending")
-	// params.Set("Fields", "Overview,Genres,MediaSources,People,PrimaryImageAspectRatio")
+	params.Set("Fields", "BasicSyncInfo,CanDelete,PrimaryImageAspectRatio,ProductionYear,Status,EndDate")
 	apiUrl := fmt.Sprintf("/emby/Users/%s/Items?%s", p.userId, params.Encode())
 
 	itemsResp := &ItemsResponse{
@@ -384,7 +387,7 @@ func (p *PluginImpl) ListPluginMediaItemInfo(req *plugin.ListPluginMediaInfoRequ
 	mediaInfos := make([]*plugin.PluginMedia, 0, len(itemsResp.Items))
 	for _, item := range itemsResp.Items {
 		// TODO convert plugin media
-		mediaInfo := p.embyItemToPluginMedia(item)
+		mediaInfo := p.embyItemToPluginMedia(item, true)
 		mediaInfos = append(mediaInfos, mediaInfo)
 	}
 	resp := &plugin.ListPluginMediaInfoResponse{
@@ -402,62 +405,34 @@ func (p *PluginImpl) GetPluginMediaItemDetail(req *plugin.GetPluginMediaDetailRe
 
 	// Fetch the item details
 	item := &EmbyItem{}
-	itemUrl := fmt.Sprintf("/emby/Users/%s/Items/%s?Fields=Overview,Genres,MediaSources,People,PrimaryImageAspectRatio",
-		p.userId, mediaInfoId)
+	itemUrl := fmt.Sprintf("/emby/Users/%s/Items/%s", p.userId, mediaInfoId)
 	err := p.sendGet(itemUrl, nil, item)
 	if err != nil {
 		slog.Error("get item failed", "err", err)
 		return nil, err
 	}
-
-	mediaInfo := p.embyItemToPluginMedia(item)
-	resp := &plugin.GetPluginMediaDetailResponse{}
-
-	switch item.Type {
-	case "Series":
-		resp.MediaSeries = mediaInfo
-		// Get seasons as media items
-		seasonsResp := &ItemsResponse{}
-		seasonsUrl := fmt.Sprintf("/emby/Users/%s/Items?ParentId=%s&IncludeItemTypes=Season&Fields=Overview",
-			p.userId, mediaInfoId)
-		err = p.sendGet(seasonsUrl, nil, seasonsResp)
-		if err == nil {
-			resp.MediaItems = make([]*plugin.PluginMedia, 0, len(seasonsResp.Items))
-			for _, season := range seasonsResp.Items {
-				resp.MediaItems = append(resp.MediaItems, p.embyItemToPluginMedia(season))
-			}
-		}
-
-	case "Season":
-		resp.MediaInfo = mediaInfo
-		// Get episodes
-		episodesResp := &ItemsResponse{}
-		episodesUrl := fmt.Sprintf("/emby/Users/%s/Items?ParentId=%s&IncludeItemTypes=Episode&Fields=Overview,MediaSources",
-			p.userId, mediaInfoId)
-		err = p.sendGet(episodesUrl, nil, episodesResp)
-		if err == nil {
-			resp.MediaItems = make([]*plugin.PluginMedia, 0, len(episodesResp.Items))
-			for _, episode := range episodesResp.Items {
-				resp.MediaItems = append(resp.MediaItems, p.embyItemToPluginMedia(episode))
-			}
-		}
-		// Fetch the parent series info
-		if item.ParentId != "" {
-			seriesItem := &EmbyItem{}
-			seriesUrl := fmt.Sprintf("/emby/Users/%s/Items/%s?Fields=Overview,Genres,PrimaryImageAspectRatio",
-				p.userId, item.ParentId)
-			err = p.sendGet(seriesUrl, nil, seriesItem)
-			if err == nil {
-				resp.MediaSeries = p.embyItemToPluginMedia(seriesItem)
-			}
-		}
-
-	default:
-		// Movie, Episode, or other - treat as media info
-		resp.MediaInfo = mediaInfo
+	seasonResp := ItemsResponse{
+		Items: []*EmbyItem{},
+	}
+	// check seasons or movie
+	seasonUrl := fmt.Sprintf("/emby/Shows/%s/Seasons?UserId=%s&Fields=BasicSyncInfo,CanDelete,PrimaryImageAspectRatio,Overview", mediaInfoId, p.userId)
+	err = p.sendGet(seasonUrl, nil, &seasonResp)
+	if err != nil {
+		slog.Error("get item failed", "err", err)
+		return nil, err
 	}
 
-	return resp, nil
+	epResp := ItemsResponse{
+		Items: []*EmbyItem{},
+	}
+	// check episodes
+	epUrl := fmt.Sprintf("/emby/Shows/%s/Items?UserId=%s&Fields=BasicSyncInfo,CanDelete,PrimaryImageAspectRatio,Overview,PremiereDate,ProductionYear,RunTimeTicks,SpecialEpisodeNumbers&ParentId=%s", mediaInfoId, p.userId, mediaInfoId)
+	err = p.sendGet(epUrl, nil, &epResp)
+	if err != nil {
+		slog.Error("get item failed", "err", err)
+		return nil, err
+	}
+	return nil, nil
 }
 
 // ---------------------------------------------------------------------------
@@ -579,84 +554,56 @@ func (p *PluginImpl) getTags(parentId string) ([]*FilterItem, error) {
 	return resp.Items, nil
 }
 
-// buildMenuItems converts a list of PluginItems into PluginMenu entries.
-func buildMenuItems(label string, items []*plugin.PluginItem) []*plugin.PluginMenu {
-	result := make([]*plugin.PluginMenu, 0, len(items))
-	for _, item := range items {
-		result = append(result, &plugin.PluginMenu{
-			Menu: item,
-		})
-	}
-	return result
-}
-
 // embyItemToPluginMedia converts an Emby item to a PluginMedia struct.
-func (p *PluginImpl) embyItemToPluginMedia(item *EmbyItem) *plugin.PluginMedia {
+func (p *PluginImpl) embyItemToPluginMedia(item *EmbyItem, list bool) *plugin.PluginMedia {
 	addr := strings.TrimRight(p.embyAuth.Addr.StringValue.Value, "/")
 
 	media := &plugin.PluginMedia{
 		MediaId:       item.Id,
 		Name:          item.Name,
 		ParentMediaId: item.ParentId,
+		PosterUrl:     fmt.Sprintf("%s/emby/Items/%s/Images/Primary?maxHeight=400&maxWidth=300&quality=90", addr, item.Id),
+		Year:          uint64(item.ProductionYear),
+		Genres:        []string{},
+		Desc:          item.Overview,
+		OriginalName:  item.OriginalTitle,
 	}
-
-	// Set media type based on emby item type
-	switch item.Type {
-	case "Series":
-		media.MediaType = plugin.PluginMedia_MEDIA_SERIES
-	case "Season":
-		media.MediaType = plugin.PluginMedia_MEDIA_INFO
-		media.Name = fmt.Sprintf("%s - %s", item.SeriesName, item.Name)
-	case "Episode":
-		media.MediaType = plugin.PluginMedia_MEDIA_PLAY_ITEM
-		media.Name = fmt.Sprintf("E%d - %s", item.IndexNumber, item.Name)
-		media.PlayIndex = uint64(item.IndexNumber)
-		if item.RunTimeTicks > 0 {
-			media.Duration = uint64(item.RunTimeTicks / 10000000)
-		}
-	default:
-		if item.MediaType == "Video" || item.Type == "Movie" {
-			media.MediaType = plugin.PluginMedia_MEDIA_PLAY_ITEM
-			if item.RunTimeTicks > 0 {
-				media.Duration = uint64(item.RunTimeTicks / 10000000)
-			}
-		} else if item.IsFolder {
-			media.MediaType = plugin.PluginMedia_MEDIA_INFO
-		} else {
-			media.MediaType = plugin.PluginMedia_MEDIA_PLAY_ITEM
-		}
-	}
-
-	// Overview / description
-	if item.Overview != "" {
-		media.Desc = item.Overview
-	}
-
-	// Release date and year
-	if item.PremiereDate != "" {
-		media.ReleaseDate = item.PremiereDate
-	}
-	if item.ProductionYear > 0 {
-		media.Year = uint64(item.ProductionYear)
-	}
-
-	// Genres
 	if len(item.GenreItems) > 0 {
-		media.Genres = make([]string, len(item.GenreItems))
-		for i, g := range item.GenreItems {
-			media.Genres[i] = g.Name
+		media.Genres = []string{}
+		for _, genre := range item.GenreItems {
+			media.Genres = append(media.Genres, genre.Name)
+		}
+	}
+	if len(item.People) > 0 {
+		media.Credit = []*plugin.PluginMedia_Credit{}
+		for _, person := range item.People {
+			media.Credit = append(media.Credit, &plugin.PluginMedia_Credit{
+				CreditType: plugin.PluginMedia_CreditActor,
+				Name:       person.Name,
+				Character:  person.Role,
+				ProfileUrl: fmt.Sprintf("%s/emby/Items/%s/Images/Primary?maxHeight=300&maxWidth=200&tag=%s&quality=90", addr, item.Id, item.ImageTags["PrimaryImageTag"]),
+			})
 		}
 	}
 
-	// Image URLs using emby's image API
-	if item.ImageTags != nil {
-		if _, ok := item.ImageTags["Primary"]; ok {
-			media.PosterUrl = fmt.Sprintf("%s/emby/Items/%s/Images/Primary?UserId=%s", addr, item.Id, p.userId)
+	if list {
+		media.MediaType = plugin.PluginMedia_MEDIA_INFO
+		if item.ImageTags["Primary"] != "" {
+			media.PosterUrl = fmt.Sprintf("%s/emby/Items/%s/Images/Primary?maxHeight=400&tag=%s&maxWidth=300&quality=90", addr, item.Id, item.ImageTags["Primary"])
 		}
-		if _, ok := item.ImageTags["Backdrop"]; ok {
-			media.BackdropUrl = fmt.Sprintf("%s/emby/Items/%s/Images/Backdrop?UserId=%s", addr, item.Id, p.userId)
+	} else {
+		switch item.Type {
+		case "Series":
+			media.MediaType = plugin.PluginMedia_MEDIA_SERIES
+		case "Movie":
+			media.MediaType = plugin.PluginMedia_MEDIA_INFO
+		case "Season":
+			media.MediaType = plugin.PluginMedia_MEDIA_INFO
+		case "Episode":
+			media.MediaType = plugin.PluginMedia_MEDIA_PLAY_ITEM
+		default:
+			return nil
 		}
 	}
-
 	return media
 }

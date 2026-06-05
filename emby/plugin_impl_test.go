@@ -53,9 +53,14 @@ func TestPluginImpl(t *testing.T) {
 		t.Logf("filter %+v\n", filters)
 	}
 
-	p.ListPluginMediaItemInfo(&plugin.ListPluginMediaInfoRequest{
+	mediaInfosResp, err := p.ListPluginMediaItemInfo(&plugin.ListPluginMediaInfoRequest{
+		Menu:     menus.GetPluginMenus()[1].Menu,
 		PageSize: 50,
 		Page:     1,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("mediaInfosResp %+v\n", mediaInfosResp)
 
 }

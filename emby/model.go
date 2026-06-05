@@ -35,44 +35,47 @@ type ItemsResponse struct {
 	StartIndex       int         `json:"StartIndex"`
 }
 
-// GenreItem represents a genre reference in an Emby response
-type GenreItem struct {
-	Name string      `json:"Name"`
-	Id   interface{} `json:"Id"`
+// Item represents a genre reference in an Emby response
+type Item struct {
+	Name            string      `json:"Name"`
+	Id              interface{} `json:"Id"`
+	Role            string      `json:"Role"`
+	PrimaryImageTag string      `json:"PrimaryImageTag"`
 }
 
 // EmbyItem represents a single item from the Emby API
 type EmbyItem struct {
-	Name           string            `json:"Name"`
-	Id             string            `json:"Id"`
-	Type           string            `json:"Type"`
-	IsFolder       bool              `json:"IsFolder"`
-	Path           string            `json:"Path"`
-	ParentId       string            `json:"ParentId"`
-	CollectionType string            `json:"CollectionType"`
-	Overview       string            `json:"Overview"`
-	RunTimeTicks   int64             `json:"RunTimeTicks"`
-	ProductionYear int               `json:"ProductionYear"`
-	IndexNumber    int               `json:"IndexNumber"`
-	ParentIndexNum int               `json:"ParentIndexNumber"`
-	SeriesName     string            `json:"SeriesName"`
-	SeasonName     string            `json:"SeasonName"`
-	Album          string            `json:"Album"`
-	MediaType      string            `json:"MediaType"`
-	Container      string            `json:"Container"`
-	Size           int64             `json:"Size"`
-	PremiereDate   string            `json:"PremiereDate"`
-	DateCreated    string            `json:"DateCreated"`
-	GenreItems     []*GenreItem      `json:"GenreItems"`
-	ImageTags      map[string]string `json:"ImageTags"`
-	UserData       *EmbyUserData     `json:"UserData"`
-}
-
-// EmbyUserData represents user-specific item data
-type EmbyUserData struct {
-	Played         bool   `json:"Played"`
-	IsFavorite     bool   `json:"IsFavorite"`
-	LastPlayedDate string `json:"LastPlayedDate"`
+	Name     string `json:"Name"`
+	Id       string `json:"Id"`
+	Type     string `json:"Type"`
+	IsFolder bool   `json:"IsFolder"`
+	Path     string `json:"Path"`
+	ParentId string `json:"ParentId"`
+	// CollectionType string            `json:"CollectionType"`
+	Overview       string `json:"Overview"`
+	RunTimeTicks   int64  `json:"RunTimeTicks"`
+	ProductionYear int    `json:"ProductionYear"`
+	// season index
+	IndexNumber int    `json:"IndexNumber"`
+	SeriesName  string `json:"SeriesName"`
+	SeriesId    string `json:"SeriesId"`
+	SeasonId    string `json:"SeasonId"`
+	SeasonName  string `json:"SeasonName"`
+	// ParentIndexNum int               `json:"ParentIndexNumber"`
+	// SeasonName   string            `json:"SeasonName"`
+	// Album        string            `json:"Album"`
+	// MediaType    string            `json:"MediaType"`
+	// Container    string            `json:"Container"`
+	// Size         int64             `json:"Size"`
+	// PremiereDate string            `json:"PremiereDate"`
+	DateCreated       string            `json:"DateCreated"`
+	GenreItems        []*Item           `json:"GenreItems"`
+	Studios           []*Item           `json:"Studios"`
+	OfficialRating    string            `json:"OfficialRating"`
+	OriginalTitle     string            `json:"OriginalTitle"`
+	ImageTags         map[string]string `json:"ImageTags"`
+	BackdropImageTags []string          `json:"BackdropImageTags"`
+	People            []*Item           `json:"Poople"`
 }
 
 // UserResponse represents the /Users endpoint response (list of users)
