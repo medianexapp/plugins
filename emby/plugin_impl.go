@@ -155,7 +155,7 @@ func (p *PluginImpl) GetDirEntry(req *plugin.GetDirEntryRequest) (*plugin.DirEnt
 // GetFileResource implements IPlugin - returns stream URLs for an emby media item.
 // Uses MediaPlayId if available, otherwise falls back to FilePath.
 func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugin.FileResource, error) {
-	resp := plugin.FileResource{
+	resp := &plugin.FileResource{
 		FileResourceData: []*plugin.FileResource_FileResourceData{},
 	}
 	slog.Debug("GetFileResource", "filePath", req.FilePath, "mediaPlayId", req.GetMediaPlayId())
@@ -165,10 +165,10 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 	params.Set("MaxStreamingBitrate", "200000000")
 	params.Set("MediaSourceId", "")
 	params.Set("reqformat", "json")
-	uri := fmt.Sprintf("/emby/Items/%s/PlaybackInfo?%s", req.MediaPlayId, params.Encode())
+	uri := fmt.Sprintf("/emby/Items/%s/PlaybackInfo", req.MediaPlayId)
 	reqData := strings.NewReader(getdeviceProfile(0))
 	respData := &MediaSourcesData{}
-	err := p.sendPost(uri, reqData, respData)
+	err := p.sendPost(fmt.Sprintf("%s?%s", uri, params.Encode()), reqData, respData)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +176,7 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 		return nil, fmt.Errorf("no media sources found")
 	}
 	mediaResource := respData.MediaSources[0]
-	fileResource := &plugin.FileResource{}
+
 	var (
 		show4K    bool
 		show2K    bool
@@ -184,6 +184,7 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 		show720p  bool
 	)
 	for _, stream := range mediaResource.MediaStreams {
+		slog.Info("stream.Type", "type", stream.Type, "stream.Width", stream.Width)
 		if stream.Type == "Video" {
 			if stream.Width >= 3840 {
 				show4K = true
@@ -204,14 +205,14 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 	if show4K {
 		reqData := strings.NewReader(getdeviceProfile(3840))
 		respData := &MediaSourcesData{}
-		err := p.sendPost(uri, reqData, respData)
+		err := p.sendPost(fmt.Sprintf("%s?%s", uri, params.Encode()), reqData, respData)
 		if err != nil {
 			return nil, err
 		}
 		if len(respData.MediaSources) > 0 {
 			mediaSource := respData.MediaSources[0]
 			resp.FileResourceData = append(resp.FileResourceData, &plugin.FileResource_FileResourceData{
-				Url:        fmt.Sprintf("%s%s", addr, mediaSource.DirectStreamURL),
+				Url:        fmt.Sprintf("%s%s", addr, mediaSource.TranscodingUrl),
 				Resolution: plugin.FileResource_UHD,
 			})
 		}
@@ -219,14 +220,14 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 	if show2K {
 		reqData := strings.NewReader(getdeviceProfile(2560))
 		respData := &MediaSourcesData{}
-		err := p.sendPost(uri, reqData, respData)
+		err := p.sendPost(fmt.Sprintf("%s?%s", uri, params.Encode()), reqData, respData)
 		if err != nil {
 			return nil, err
 		}
 		if len(respData.MediaSources) > 0 {
 			mediaSource := respData.MediaSources[0]
 			resp.FileResourceData = append(resp.FileResourceData, &plugin.FileResource_FileResourceData{
-				Url:        fmt.Sprintf("%s%s", addr, mediaSource.DirectStreamURL),
+				Url:        fmt.Sprintf("%s%s", addr, mediaSource.TranscodingUrl),
 				Resolution: plugin.FileResource_QHD,
 			})
 		}
@@ -234,14 +235,14 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 	if show1080p {
 		reqData := strings.NewReader(getdeviceProfile(1920))
 		respData := &MediaSourcesData{}
-		err := p.sendPost(uri, reqData, respData)
+		err := p.sendPost(fmt.Sprintf("%s?%s", uri, params.Encode()), reqData, respData)
 		if err != nil {
 			return nil, err
 		}
 		if len(respData.MediaSources) > 0 {
 			mediaSource := respData.MediaSources[0]
 			resp.FileResourceData = append(resp.FileResourceData, &plugin.FileResource_FileResourceData{
-				Url:        fmt.Sprintf("%s%s", addr, mediaSource.DirectStreamURL),
+				Url:        fmt.Sprintf("%s%s", addr, mediaSource.TranscodingUrl),
 				Resolution: plugin.FileResource_FHD,
 			})
 		}
@@ -249,19 +250,19 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 	if show720p {
 		reqData := strings.NewReader(getdeviceProfile(1280))
 		respData := &MediaSourcesData{}
-		err := p.sendPost(uri, reqData, respData)
+		err := p.sendPost(fmt.Sprintf("%s?%s", uri, params.Encode()), reqData, respData)
 		if err != nil {
 			return nil, err
 		}
 		if len(respData.MediaSources) > 0 {
 			mediaSource := respData.MediaSources[0]
 			resp.FileResourceData = append(resp.FileResourceData, &plugin.FileResource_FileResourceData{
-				Url:        fmt.Sprintf("%s%s", addr, mediaSource.DirectStreamURL),
+				Url:        fmt.Sprintf("%s%s", addr, mediaSource.TranscodingUrl),
 				Resolution: plugin.FileResource_HD,
 			})
 		}
 	}
-	return fileResource, nil
+	return resp, nil
 }
 
 // ---------------------------------------------------------------------------

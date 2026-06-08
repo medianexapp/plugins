@@ -166,7 +166,7 @@ type MediaSourcesData struct {
 		Bitrate             int   `json:"Bitrate"`
 		RequiredHTTPHeaders struct {
 		} `json:"RequiredHttpHeaders"`
-		DirectStreamURL         string `json:"DirectStreamUrl"`
+		TranscodingUrl          string `json:"TranscodingUrl"`
 		ReadAtNativeFramerate   bool   `json:"ReadAtNativeFramerate"`
 		DefaultAudioStreamIndex int    `json:"DefaultAudioStreamIndex"`
 	} `json:"MediaSources"`
