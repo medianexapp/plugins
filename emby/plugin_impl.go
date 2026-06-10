@@ -12,6 +12,7 @@ import (
 
 	"github.com/labulakalia/wazero_net/util"
 	_ "github.com/labulakalia/wazero_net/wasi/http"
+	"github.com/medianexapp/plugin_api/httpclient"
 	"github.com/medianexapp/plugin_api/plugin"
 	"golang.org/x/sync/errgroup"
 )
@@ -21,6 +22,8 @@ type PluginImpl struct {
 	userId      string
 	serverId    string
 	accessToken string
+
+	hb *httpclient.Builder
 }
 
 type embyAuth struct {
@@ -93,7 +96,7 @@ func (p *PluginImpl) CheckAuthMethod(authMethod *plugin.AuthMethod) (*plugin.Aut
 
 // CheckAuthData implements IPlugin.
 func (p *PluginImpl) CheckAuthData(authDataBytes []byte) error {
-	slog.Debug("CheckAuthData")
+	slog.Debug("CheckAuthData", "data", string(authDataBytes))
 	formData := &plugin.Formdata{}
 	err := formData.UnmarshalVT(authDataBytes)
 	if err != nil {
@@ -102,10 +105,6 @@ func (p *PluginImpl) CheckAuthData(authDataBytes []byte) error {
 	p.embyAuth.Addr.StringValue.Value = formData.FormItems[0].Value.(*plugin.Formdata_FormItem_StringValue).StringValue.Value
 	p.embyAuth.User.StringValue.Value = formData.FormItems[1].Value.(*plugin.Formdata_FormItem_StringValue).StringValue.Value
 	p.embyAuth.Password.ObscureStringValue.Value = formData.FormItems[2].Value.(*plugin.Formdata_FormItem_ObscureStringValue).ObscureStringValue.Value
-
-	addr := strings.TrimRight(p.embyAuth.Addr.StringValue.Value, "/")
-	slog.Debug("emby connect", "addr", addr)
-
 	// Authenticate with username and password to get access token
 	user := p.embyAuth.User.StringValue.Value
 	password := p.embyAuth.Password.ObscureStringValue.Value
@@ -116,7 +115,8 @@ func (p *PluginImpl) CheckAuthData(authDataBytes []byte) error {
 		"Username": user,
 		"Pw":       password,
 	})
-	err = p.sendAuthPost(http.MethodPost, authUrl, bodyData, authResp)
+
+	err = p.sendRequest(http.MethodPost, authUrl, strings.NewReader(string(bodyData)), authResp)
 	if err != nil {
 		slog.Error("authenticate failed", "err", err)
 		return err
@@ -129,7 +129,7 @@ func (p *PluginImpl) CheckAuthData(authDataBytes []byte) error {
 
 	// Verify connection by getting system info
 	sysInfo := &SystemInfoResponse{}
-	err = p.sendGet("/emby/System/Info", nil, sysInfo)
+	err = p.sendRequest(http.MethodGet, "/emby/System/Info", nil, sysInfo)
 	if err != nil {
 		slog.Error("get system info failed", "err", err)
 		return err
@@ -168,7 +168,7 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 	uri := fmt.Sprintf("/emby/Items/%s/PlaybackInfo", req.MediaPlayId)
 	reqData := strings.NewReader(getdeviceProfile(0))
 	respData := &MediaSourcesData{}
-	err := p.sendPost(fmt.Sprintf("%s?%s", uri, params.Encode()), reqData, respData)
+	err := p.sendRequest(http.MethodPost, fmt.Sprintf("%s?%s", uri, params.Encode()), reqData, respData)
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +205,7 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 	if show4K {
 		reqData := strings.NewReader(getdeviceProfile(3840))
 		respData := &MediaSourcesData{}
-		err := p.sendPost(fmt.Sprintf("%s?%s", uri, params.Encode()), reqData, respData)
+		err := p.sendRequest(http.MethodPost, fmt.Sprintf("%s?%s", uri, params.Encode()), reqData, respData)
 		if err != nil {
 			return nil, err
 		}
@@ -220,7 +220,7 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 	if show2K {
 		reqData := strings.NewReader(getdeviceProfile(2560))
 		respData := &MediaSourcesData{}
-		err := p.sendPost(fmt.Sprintf("%s?%s", uri, params.Encode()), reqData, respData)
+		err := p.sendRequest(http.MethodPost, fmt.Sprintf("%s?%s", uri, params.Encode()), reqData, respData)
 		if err != nil {
 			return nil, err
 		}
@@ -235,7 +235,7 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 	if show1080p {
 		reqData := strings.NewReader(getdeviceProfile(1920))
 		respData := &MediaSourcesData{}
-		err := p.sendPost(fmt.Sprintf("%s?%s", uri, params.Encode()), reqData, respData)
+		err := p.sendRequest(http.MethodPost, fmt.Sprintf("%s?%s", uri, params.Encode()), reqData, respData)
 		if err != nil {
 			return nil, err
 		}
@@ -250,7 +250,7 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 	if show720p {
 		reqData := strings.NewReader(getdeviceProfile(1280))
 		respData := &MediaSourcesData{}
-		err := p.sendPost(fmt.Sprintf("%s?%s", uri, params.Encode()), reqData, respData)
+		err := p.sendRequest(http.MethodPost, fmt.Sprintf("%s?%s", uri, params.Encode()), reqData, respData)
 		if err != nil {
 			return nil, err
 		}
@@ -276,7 +276,7 @@ func (p *PluginImpl) GetPluginMenus() (*plugin.PluginMenus, error) {
 	slog.Info("GetPluginMenus")
 
 	viewsResp := &ItemsResponse{}
-	err := p.sendGet(fmt.Sprintf("/emby/Users/%s/Views", p.userId), nil, viewsResp)
+	err := p.sendRequest(http.MethodGet, fmt.Sprintf("/emby/Users/%s/Views", p.userId), nil, viewsResp)
 	if err != nil {
 		slog.Error("get views failed", "err", err)
 		return nil, err
@@ -476,7 +476,7 @@ func (p *PluginImpl) ListPluginMediaItemInfo(req *plugin.ListPluginMediaInfoRequ
 	itemsResp := &ItemsResponse{
 		Items: []*EmbyItem{},
 	}
-	err := p.sendGet(apiUrl, nil, itemsResp)
+	err := p.sendRequest(http.MethodGet, apiUrl, nil, itemsResp)
 	if err != nil {
 		slog.Error("get items failed", "err", err)
 		return nil, err
@@ -497,7 +497,7 @@ func (p *PluginImpl) getItemById(itemId string) (*EmbyItem, error) {
 	item := &EmbyItem{}
 	params := url.Values{}
 	itemUrl := fmt.Sprintf("/emby/Users/%s/Items/%s?%s", p.userId, itemId, params.Encode())
-	err := p.sendGet(itemUrl, nil, item)
+	err := p.sendRequest(http.MethodGet, itemUrl, nil, item)
 	if err != nil {
 		slog.Error("get item failed", "err", err)
 		return nil, err
@@ -540,7 +540,7 @@ func (p *PluginImpl) GetPluginMediaItemDetail(req *plugin.GetPluginMediaDetailRe
 		episodesResp := &ItemsResponse{
 			Items: []*EmbyItem{},
 		}
-		err = p.sendGet(uri, nil, episodesResp)
+		err = p.sendRequest(http.MethodGet, uri, nil, episodesResp)
 		if err != nil {
 			slog.Error("get season episodes failed", "err", err)
 			return nil, err
@@ -563,79 +563,50 @@ func (p *PluginImpl) GetPluginMediaItemDetail(req *plugin.GetPluginMediaDetailRe
 // Helpers
 // ---------------------------------------------------------------------------
 
-// sendGet sends a GET request to the emby server.
-func (p *PluginImpl) sendGet(uri string, reqBody, respBody any) error {
-	addr := strings.TrimRight(p.embyAuth.Addr.StringValue.Value, "/")
-	fullUrl := fmt.Sprintf("%s%s", addr, uri)
+// // sendGet sends a GET request to the emby server.
+// func (p *PluginImpl) sendRequest(http.MethodGet,uri string, reqBody, respBody any) error {
+// 	addr := strings.TrimRight(p.embyAuth.Addr.StringValue.Value, "/")
+// 	fullUrl := fmt.Sprintf("%s%s", addr, uri)
 
-	httpReq, err := http.NewRequest(http.MethodGet, fullUrl, nil)
+// 	httpReq, err := http.NewRequest(http.MethodGet, fullUrl, nil)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	httpReq.Header.Set("X-Emby-Token", p.accessToken)
+// 	httpReq.Header.Set("Content-Type", "application/json")
+
+// 	return p.doRequest(httpReq, uri, respBody)
+// }
+
+func (p *PluginImpl) sendRequest(method string, uri string, reqBody any, respBody any) error {
+	if p.hb == nil {
+		addr := strings.TrimRight(p.embyAuth.Addr.StringValue.Value, "/")
+		p.hb = httpclient.NewBuilder().SetBaseURL(addr).
+			SetHeader("Content-Type", "application/json").
+			SetHeader("user-agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36").
+			SetHeader("X-Emby-Authorization",
+				`MediaBrowser Client="Medianex/Plugin", Device="Plugin", DeviceId="plugin", Version="1.0.0"`)
+	}
+
+	sendReq := p.hb.SetURI(uri).SetMethod(method).Debug()
+	if reqBody != nil {
+		sendReq = sendReq.SetBody(reqBody)
+	}
+	if p.accessToken != "" {
+		sendReq = sendReq.SetHeader("X-Emby-Token", p.accessToken)
+	}
+
+	resp, err := sendReq.RawResponse()
 	if err != nil {
 		return err
 	}
-	httpReq.Header.Set("X-Emby-Token", p.accessToken)
-	httpReq.Header.Set("Content-Type", "application/json")
-
-	return p.doRequest(httpReq, uri, respBody)
-}
-
-func (p *PluginImpl) sendPost(uri string, reqBody io.Reader, respBody any) error {
-	addr := strings.TrimRight(p.embyAuth.Addr.StringValue.Value, "/")
-	fullUrl := fmt.Sprintf("%s%s", addr, uri)
-
-	httpReq, err := http.NewRequest(http.MethodPost, fullUrl, reqBody)
+	defer resp.Body.Close()
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
-	httpReq.Header.Set("X-Emby-Token", p.accessToken)
-	httpReq.Header.Set("Content-Type", "application/json")
-
-	return p.doRequest(httpReq, uri, respBody)
-}
-
-// sendAuthPost sends a POST request with Emby auth headers (for /Users/AuthenticateByName).
-func (p *PluginImpl) sendAuthPost(method string, uri string, body []byte, respBody any) error {
-	addr := strings.TrimRight(p.embyAuth.Addr.StringValue.Value, "/")
-
-	fullUrl := fmt.Sprintf("%s%s", addr, uri)
-	slog.Debug("sending auth POST request", "url", fullUrl)
-
-	httpReq, err := http.NewRequest(method, fullUrl, strings.NewReader(string(body)))
-	if err != nil {
-		return err
-	}
-	httpReq.Header.Set("Content-Type", "application/json")
-	// Emby auth requires this header format
-	httpReq.Header.Set("X-Emby-Authorization",
-		`MediaBrowser Client="Plugin", Device="Plugin", DeviceId="plugin", Version="1.0.0"`)
-
-	return p.doRequest(httpReq, uri, respBody)
-}
-
-// doRequest executes an HTTP request and unmarshals the response.
-func (p *PluginImpl) doRequest(httpReq *http.Request, uri string, respBody any) error {
-	httpResp, err := http.DefaultClient.Do(httpReq)
-	if err != nil {
-		return err
-	}
-	defer httpResp.Body.Close()
-
-	bodyData, err := io.ReadAll(httpResp.Body)
-	if err != nil {
-		return err
-	}
-	slog.Info("doRequest finished", "uri", uri, "statusCode", httpResp.StatusCode, "body", string(bodyData))
-	if httpResp.StatusCode >= 400 {
-		slog.Error("emby api error", "uri", uri, "statusCode", httpResp.StatusCode, "body", string(bodyData))
-		return fmt.Errorf("emby api error: status=%d, body=%s", httpResp.StatusCode, string(bodyData))
-	}
-
-	if respBody != nil {
-		err = json.Unmarshal(bodyData, respBody)
-		if err != nil {
-			return fmt.Errorf("unmarshal failed for %s: %w, body=%s", uri, err, string(bodyData))
-		}
-	}
-
+	fmt.Println("resp data", string(data), resp.StatusCode)
+	json.Unmarshal(data, respBody)
 	return nil
 }
 
@@ -643,7 +614,7 @@ func (p *PluginImpl) doRequest(httpReq *http.Request, uri string, respBody any) 
 func (p *PluginImpl) getGenres(parentId string) ([]*FilterItem, error) {
 	genresUrl := fmt.Sprintf("/emby/Genres?ParentId=%s&UserId=%s", parentId, p.userId)
 	resp := &FilterItemsResponse{}
-	err := p.sendGet(genresUrl, nil, resp)
+	err := p.sendRequest(http.MethodGet, genresUrl, nil, resp)
 	if err != nil {
 		return nil, err
 	}
@@ -653,7 +624,7 @@ func (p *PluginImpl) getGenres(parentId string) ([]*FilterItem, error) {
 func (p *PluginImpl) getYears(parentId string) ([]*FilterItem, error) {
 	genresUrl := fmt.Sprintf("/emby/Years?ParentId=%s&UserId=%s", parentId, p.userId)
 	resp := &FilterItemsResponse{}
-	err := p.sendGet(genresUrl, nil, resp)
+	err := p.sendRequest(http.MethodGet, genresUrl, nil, resp)
 	if err != nil {
 		return nil, err
 	}
@@ -663,7 +634,7 @@ func (p *PluginImpl) getYears(parentId string) ([]*FilterItem, error) {
 func (p *PluginImpl) getOfficialRatings(parentId string) ([]*FilterItem, error) {
 	genresUrl := fmt.Sprintf("/emby/OfficialRatings?ParentId=%s&UserId=%s", parentId, p.userId)
 	resp := &FilterItemsResponse{}
-	err := p.sendGet(genresUrl, nil, resp)
+	err := p.sendRequest(http.MethodGet, genresUrl, nil, resp)
 	if err != nil {
 		return nil, err
 	}
@@ -673,7 +644,7 @@ func (p *PluginImpl) getOfficialRatings(parentId string) ([]*FilterItem, error) 
 func (p *PluginImpl) getStudios(parentId string) ([]*FilterItem, error) {
 	genresUrl := fmt.Sprintf("/emby/Studios?ParentId=%s&UserId=%s", parentId, p.userId)
 	resp := &FilterItemsResponse{}
-	err := p.sendGet(genresUrl, nil, resp)
+	err := p.sendRequest(http.MethodGet, genresUrl, nil, resp)
 	if err != nil {
 		return nil, err
 	}
@@ -683,7 +654,7 @@ func (p *PluginImpl) getStudios(parentId string) ([]*FilterItem, error) {
 func (p *PluginImpl) getTags(parentId string) ([]*FilterItem, error) {
 	genresUrl := fmt.Sprintf("/emby/Tags?ParentId=%s&UserId=%s", parentId, p.userId)
 	resp := &FilterItemsResponse{}
-	err := p.sendGet(genresUrl, nil, resp)
+	err := p.sendRequest(http.MethodGet, genresUrl, nil, resp)
 	if err != nil {
 		return nil, err
 	}
