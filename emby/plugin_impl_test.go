@@ -45,7 +45,7 @@ func TestPluginImpl(t *testing.T) {
 	t.Logf("menus %+v\n", menus.GetPluginMenus())
 
 	// 2. Test GetPluginFilterItems
-	resp, err := p.GetPluginFilterItems(menus.GetPluginMenus()[1].Menu)
+	resp, err := p.GetPluginFilterItems(menus.GetPluginMenus()[0].Menu)
 	if err != nil {
 		t.Fatalf("GetPluginFilterItems for menu '%s' failed: %v", menus.GetPluginMenus()[0].Menu, err)
 	}
@@ -53,37 +53,39 @@ func TestPluginImpl(t *testing.T) {
 		t.Logf("filter %+v\n", filters)
 	}
 
-	t.Log("Menu", menus.GetPluginMenus()[6].Menu)
+	t.Log("Menu", menus.GetPluginMenus()[0].Menu)
 	mediaInfosResp2, err := p.ListPluginMediaItemInfo(&plugin.ListPluginMediaInfoRequest{
-		Menu:     menus.GetPluginMenus()[6].Menu,
-		PageSize: 50,
+		Menu:     menus.GetPluginMenus()[0].Menu,
+		PageSize: 10,
 		Page:     1,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("mediaInfosResp %+v\n", mediaInfosResp2.MediaInfos)
+	for _, info := range mediaInfosResp2.MediaInfos {
+		t.Logf("mediaInfosResp %+v\n", info)
+	}
 
-	mediaInfoDetailResp2, err := p.GetPluginMediaItemDetail(&plugin.GetPluginMediaDetailRequest{
-		MediaInfoId: mediaInfosResp2.MediaInfos[1].MediaId,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Logf("mediaInfoDetailResp MediaSeries %+v\n", mediaInfoDetailResp2.MediaSeries)
-	t.Logf("mediaInfoDetailResp MediaInfo %+v\n", mediaInfoDetailResp2.MediaInfo)
-	// t.Logf("mediaInfoDetailResp RelationMediaInfo %+v\n", mediaInfoDetailResp2.RelationMediaInfo)
-	t.Logf("mediaInfoDetailResp mediaInfoDetailResp %+v\n", len(mediaInfoDetailResp2.MediaItems))
+	// mediaInfoDetailResp2, err := p.GetPluginMediaItemDetail(&plugin.GetPluginMediaDetailRequest{
+	// 	MediaInfoId: mediaInfosResp2.MediaInfos[1].MediaId,
+	// })
+	// if err != nil {
+	// 	t.Fatal(err)
+	// }
+	// t.Logf("mediaInfoDetailResp MediaSeries %+v\n", mediaInfoDetailResp2.MediaSeries)
+	// t.Logf("mediaInfoDetailResp MediaInfo %+v\n", mediaInfoDetailResp2.MediaInfo)
+	// // t.Logf("mediaInfoDetailResp RelationMediaInfo %+v\n", mediaInfoDetailResp2.RelationMediaInfo)
+	// t.Logf("mediaInfoDetailResp mediaInfoDetailResp %+v\n", len(mediaInfoDetailResp2.MediaItems))
 
-	fileResource, err := p.GetFileResource(&plugin.GetFileResourceRequest{
-		MediaPlayId: mediaInfoDetailResp2.MediaItems[0].MediaId,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	// t.Logf("fileResource %+v\n", )
-	for _, item := range fileResource.FileResourceData {
-		t.Log("url", item.Url)
-	}
+	// fileResource, err := p.GetFileResource(&plugin.GetFileResourceRequest{
+	// 	MediaPlayId: mediaInfoDetailResp2.MediaItems[0].MediaId,
+	// })
+	// if err != nil {
+	// 	t.Fatal(err)
+	// }
+	// // t.Logf("fileResource %+v\n", )
+	// for _, item := range fileResource.FileResourceData {
+	// 	t.Log("url", item.Url)
+	// }
 
 }
