@@ -64,6 +64,8 @@ type EmbyItem struct {
 	SeasonId    string `json:"SeasonId"`
 	SeasonName  string `json:"SeasonName"`
 
+	ChildCount int `json:"ChildCount"`
+
 	DateCreated    string  `json:"DateCreated"`
 	GenreItems     []*Item `json:"GenreItems"`
 	Studios        []*Item `json:"Studios"`

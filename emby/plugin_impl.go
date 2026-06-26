@@ -462,7 +462,7 @@ func (p *PluginImpl) ListPluginMediaItemInfo(req *plugin.ListPluginMediaInfoRequ
 	}
 
 	params.Set("SortBy", "SortName")
-	params.Set("SortOrder", "Ascending")
+	params.Set("SortOrder", "Descending")
 	params.Set("Fields", "BasicSyncInfo,PrimaryImageAspectRatio,ProductionYear,Status,EndDate")
 	if req.SearchName != "" {
 		params.Set("SearchTerm", req.SearchName)
@@ -507,30 +507,57 @@ func (p *PluginImpl) getItemById(itemId string) (*EmbyItem, error) {
 // and parent series information.
 func (p *PluginImpl) GetPluginMediaItemDetail(req *plugin.GetPluginMediaDetailRequest) (*plugin.GetPluginMediaDetailResponse, error) {
 	resp := &plugin.GetPluginMediaDetailResponse{
-		MediaItems:        []*plugin.PluginMedia{},
-		RelationMediaInfo: []*plugin.PluginMedia{},
+		MediaItems:         []*plugin.PluginMedia{},
+		MediaInfoRelations: []*plugin.PluginMedia{},
 	}
 	// Fetch the item details
-	mediaInfoId := req.GetMediaInfoId()
-	item, err := p.getItemById(mediaInfoId)
+	mediaId := req.GetMediaInfoId()
+	sp := strings.Split(mediaId, "_")
+	var (
+		itemId   string
+		seasonId string
+	)
+	if len(sp) > 0 {
+		itemId = sp[0]
+	}
+	if len(sp) > 1 {
+		seasonId = sp[1]
+	}
+	item, err := p.getItemById(itemId)
 	if err != nil {
 		slog.Error("get item failed", "err", err)
 		return nil, err
 	}
 
-	resp.MediaInfo = p.embyItemToPluginMedia(item, plugin.PluginMedia_MEDIA_INFO)
 	switch item.Type {
-	case "Season":
-		seriesItem, err := p.getItemById(item.ParentId)
+	case "Series":
+		resp.MediaSeries = p.embyItemToPluginMedia(item, plugin.PluginMedia_MEDIA_SERIES)
+		seasonParams := url.Values{}
+		seasonParams.Set("UserId", p.userId)
+		seasonParams.Set("Fields", "BasicSyncInfo,CanDelete,PrimaryImageAspectRatio,Overview")
+		seaUri := fmt.Sprintf("/emby/Shows/%s/Seasons?%s", item.Id, seasonParams.Encode())
+		seasonsResp := &ItemsResponse{
+			Items: []*EmbyItem{},
+		}
+		err = p.sendRequest(http.MethodGet, seaUri, nil, seasonsResp)
 		if err != nil {
-			slog.Error("get series item failed", "err", err)
+			slog.Error("get season episodes failed", "err", err)
 			return nil, err
 		}
 
-		resp.MediaSeries = p.embyItemToPluginMedia(seriesItem, plugin.PluginMedia_MEDIA_SERIES)
-
+		if seasonId == "" {
+			seasonId = seasonsResp.Items[0].Id
+		}
+		for _, seasonItem := range seasonsResp.Items {
+			if seasonItem.Id == seasonId {
+				resp.MediaInfo = p.embyItemToPluginMedia(seasonItem, plugin.PluginMedia_MEDIA_INFO)
+			} else {
+				resp.MediaInfoRelations = append(resp.MediaInfoRelations, p.embyItemToPluginMedia(seasonItem, plugin.PluginMedia_MEDIA_INFO))
+			}
+		}
+		resp.MediaInfo.LogoUrl = resp.MediaSeries.LogoUrl
 		episodesparams := url.Values{}
-		episodesparams.Set("SeasonId", item.Id)
+		episodesparams.Set("SeasonId", seasonId)
 		episodesparams.Set("UserId", p.userId)
 		episodesparams.Set("Fields", "Overview,PrimaryImageAspectRatio,PremiereDate,ProductionYear,SyncStatus")
 		uri := fmt.Sprintf("/emby/Shows/%s/Episodes?%s", item.ParentId, episodesparams.Encode())
@@ -543,13 +570,12 @@ func (p *PluginImpl) GetPluginMediaItemDetail(req *plugin.GetPluginMediaDetailRe
 			return nil, err
 		}
 		for _, item := range episodesResp.Items {
-			slog.Info("item episode", "name", item)
 			resp.MediaItems = append(resp.MediaItems, p.embyItemToPluginMedia(item, plugin.PluginMedia_MEDIA_PLAY_ITEM))
 		}
 	case "Movie":
 		// todo get item
+		resp.MediaInfo = p.embyItemToPluginMedia(item, plugin.PluginMedia_MEDIA_INFO)
 		mediaPlayItem := p.embyItemToPluginMedia(item, plugin.PluginMedia_MEDIA_PLAY_ITEM)
-
 		resp.MediaItems = []*plugin.PluginMedia{mediaPlayItem}
 	default:
 	}
@@ -559,21 +585,6 @@ func (p *PluginImpl) GetPluginMediaItemDetail(req *plugin.GetPluginMediaDetailRe
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-// // sendGet sends a GET request to the emby server.
-// func (p *PluginImpl) sendRequest(http.MethodGet,uri string, reqBody, respBody any) error {
-// 	addr := strings.TrimRight(p.embyAuth.Addr.StringValue.Value, "/")
-// 	fullUrl := fmt.Sprintf("%s%s", addr, uri)
-
-// 	httpReq, err := http.NewRequest(http.MethodGet, fullUrl, nil)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	httpReq.Header.Set("X-Emby-Token", p.accessToken)
-// 	httpReq.Header.Set("Content-Type", "application/json")
-
-// 	return p.doRequest(httpReq, uri, respBody)
-// }
 
 func (p *PluginImpl) sendRequest(method string, uri string, reqBody any, respBody any) error {
 	if p.hb == nil {
@@ -660,16 +671,17 @@ func (p *PluginImpl) getTags(parentId string) ([]*FilterItem, error) {
 // embyItemToPluginMedia converts an Emby item to a PluginMedia struct.
 func (p *PluginImpl) embyItemToPluginMedia(item *EmbyItem, pluginMediaType plugin.PluginMedia_MediaType) *plugin.PluginMedia {
 	addr := strings.TrimRight(p.embyAuth.Addr.StringValue.Value, "/")
-
 	media := &plugin.PluginMedia{
-		MediaId:      item.Id,
-		Name:         item.Name,
-		Year:         uint64(item.ProductionYear),
-		Genres:       []string{},
-		Desc:         item.Overview,
-		OriginalName: item.OriginalTitle,
-		MediaType:    pluginMediaType,
+		PluginMediaId: item.Id,
+		Name:          item.Name,
+		Year:          uint64(item.ProductionYear),
+		Genres:        []string{},
+		Desc:          item.Overview,
+		OriginalName:  item.OriginalTitle,
+		MediaType:     pluginMediaType,
+		Index:         uint64(item.IndexNumber),
 	}
+
 	if len(item.GenreItems) > 0 {
 		media.Genres = []string{}
 		for _, genre := range item.GenreItems {
@@ -695,6 +707,11 @@ func (p *PluginImpl) embyItemToPluginMedia(item *EmbyItem, pluginMediaType plugi
 		}
 	}
 
+	if item.RunTimeTicks > 0 {
+		duration := item.RunTimeTicks / 10000000
+		media.Duration = uint64(duration)
+	}
+
 	switch item.Type {
 	case "Series":
 		if len(item.BackdropImageTags) > 0 {
@@ -702,6 +719,9 @@ func (p *PluginImpl) embyItemToPluginMedia(item *EmbyItem, pluginMediaType plugi
 		}
 		if item.ImageTags["Primary"] != "" {
 			media.PosterUrl = fmt.Sprintf("%s/emby/Items/%s/Images/Primary?maxHeight=400&tag=%s&maxWidth=300&quality=90", addr, item.Id, item.ImageTags["Primary"])
+		}
+		if item.ImageTags["Logo"] != "" {
+			media.LogoUrl = fmt.Sprintf("%s/emby/Items/%s/Images/Primary?tag=%s&quality=90", addr, item.Id, item.ImageTags["Logo"])
 		}
 
 	case "Season":
@@ -711,9 +731,9 @@ func (p *PluginImpl) embyItemToPluginMedia(item *EmbyItem, pluginMediaType plugi
 			media.PosterUrl = fmt.Sprintf("%s/emby/Items/%s/Images/Primary?maxHeight=400&tag=%s&maxWidth=300&quality=90", addr, item.SeriesId, item.SeriesPrimaryImageTag)
 		}
 		// logo url
-		media.ParentMediaId = item.SeriesId
+		media.ParentPluginMediaId = item.SeriesId
 		media.Name = fmt.Sprintf("%s %s", item.SeriesName, item.Name)
-
+		media.PluginMediaId = fmt.Sprintf("%s_%s", item.SeriesId, item.Id)
 	case "Episode":
 		if item.ImageTags["Primary"] != "" {
 			media.StillUrl = fmt.Sprintf("%s/emby/Items/%s/Images/Primary?maxHeight=400&tag=%s&maxWidth=300&quality=90", addr, item.Id, item.ImageTags["Primary"])
