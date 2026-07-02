@@ -412,10 +412,10 @@ func (p *PluginImpl) GetPluginFilterItems(subItem *plugin.PluginItem) (*plugin.P
 	return filterItems, nil
 }
 
-// ListPluginMediaItemInfo lists media items (movies, series, episodes)
+// ListPluginMedianfo lists media items (movies, series, episodes)
 // from the emby server. Supports browsing by menu, filtering by genre,
 // and text search.
-func (p *PluginImpl) ListPluginMediaItemInfo(req *plugin.ListPluginMediaInfoRequest) (*plugin.ListPluginMediaInfoResponse, error) {
+func (p *PluginImpl) ListPluginMediaInfo(req *plugin.ListPluginMediaInfoRequest) (*plugin.ListPluginMediaInfoResponse, error) {
 	slog.Debug("ListPluginMediaItemInfo",
 		"req", req,
 	)
@@ -462,7 +462,7 @@ func (p *PluginImpl) ListPluginMediaItemInfo(req *plugin.ListPluginMediaInfoRequ
 	}
 
 	params.Set("SortBy", "SortName")
-	params.Set("SortOrder", "Descending")
+	params.Set("SortOrder", "Ascending")
 	params.Set("Fields", "BasicSyncInfo,PrimaryImageAspectRatio,ProductionYear,Status,EndDate")
 	if req.SearchName != "" {
 		params.Set("SearchTerm", req.SearchName)
@@ -502,10 +502,10 @@ func (p *PluginImpl) getItemById(itemId string) (*EmbyItem, error) {
 	return item, nil
 }
 
-// GetPluginMediaItemDetail returns detailed information about a specific
+// GetPluginMediaDetail returns detailed information about a specific
 // media item, including its seasons (for series), episodes (for seasons),
 // and parent series information.
-func (p *PluginImpl) GetPluginMediaItemDetail(req *plugin.GetPluginMediaDetailRequest) (*plugin.GetPluginMediaDetailResponse, error) {
+func (p *PluginImpl) GetPluginMediaDetail(req *plugin.GetPluginMediaDetailRequest) (*plugin.GetPluginMediaDetailResponse, error) {
 	resp := &plugin.GetPluginMediaDetailResponse{
 		MediaItems:         []*plugin.PluginMedia{},
 		MediaInfoRelations: []*plugin.PluginMedia{},
@@ -576,6 +576,8 @@ func (p *PluginImpl) GetPluginMediaItemDetail(req *plugin.GetPluginMediaDetailRe
 		// todo get item
 		resp.MediaInfo = p.embyItemToPluginMedia(item, plugin.PluginMedia_MEDIA_INFO)
 		mediaPlayItem := p.embyItemToPluginMedia(item, plugin.PluginMedia_MEDIA_PLAY_ITEM)
+		mediaPlayItem.Desc = ""
+		mediaPlayItem.Name = ""
 		resp.MediaItems = []*plugin.PluginMedia{mediaPlayItem}
 	default:
 	}
@@ -721,7 +723,7 @@ func (p *PluginImpl) embyItemToPluginMedia(item *EmbyItem, pluginMediaType plugi
 			media.PosterUrl = fmt.Sprintf("%s/emby/Items/%s/Images/Primary?maxHeight=400&tag=%s&maxWidth=300&quality=90", addr, item.Id, item.ImageTags["Primary"])
 		}
 		if item.ImageTags["Logo"] != "" {
-			media.LogoUrl = fmt.Sprintf("%s/emby/Items/%s/Images/Primary?tag=%s&quality=90", addr, item.Id, item.ImageTags["Logo"])
+			media.LogoUrl = fmt.Sprintf("%s/emby/Items/%s/Images/Logo?tag=%s&quality=90", addr, item.Id, item.ImageTags["Logo"])
 		}
 
 	case "Season":
@@ -744,8 +746,11 @@ func (p *PluginImpl) embyItemToPluginMedia(item *EmbyItem, pluginMediaType plugi
 		if item.ImageTags["Primary"] != "" {
 			media.PosterUrl = fmt.Sprintf("%s/emby/Items/%s/Images/Primary?maxHeight=400&tag=%s&maxWidth=300&quality=90", addr, item.Id, item.ImageTags["Primary"])
 		}
-		if item.SeriesPrimaryImageTag != "" {
-			media.BackdropUrl = fmt.Sprintf("%s/emby/Items/%s/Images/Primary?maxHeight=400&tag=%s&maxWidth=300&quality=90", addr, item.Id, item.SeriesPrimaryImageTag)
+		if item.ImageTags["Logo"] != "" {
+			media.LogoUrl = fmt.Sprintf("%s/emby/Items/%s/Images/Logo?maxHeight=400&tag=%s&quality=90", addr, item.Id, item.ImageTags["Logo"])
+		}
+		if len(item.BackdropImageTags) > 0 {
+			media.BackdropUrl = fmt.Sprintf("%s/emby/Items/%s/Images/Backdrop/0?maxHeight=400&tag=%s&maxWidth=1920&quality=70", addr, item.Id, item.BackdropImageTags[0])
 		}
 
 	default:

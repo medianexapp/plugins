@@ -20,9 +20,9 @@ var (
 func TestMain(m *testing.M) {
 	p = NewPluginImpl()
 
-	p.embyAuth.Addr.StringValue.Value = "https://emby.bangumi.ca"
-	p.embyAuth.User.StringValue.Value = "labulakalia"
-	p.embyAuth.Password.ObscureStringValue.Value = "Ww123456@@@"
+	p.embyAuth.Addr.StringValue.Value = ""
+	p.embyAuth.User.StringValue.Value = ""
+	p.embyAuth.Password.ObscureStringValue.Value = ""
 
 	auth, err := p.GetAuth()
 	if err != nil {
@@ -68,7 +68,7 @@ func TestPluginImpl(t *testing.T) {
 	}
 
 	t.Log("Menu", menus.GetPluginMenus()[0].Menu)
-	mediaInfosResp2, err := p.ListPluginMediaItemInfo(&plugin.ListPluginMediaInfoRequest{
+	mediaInfosResp2, err := p.ListPluginMediaInfo(&plugin.ListPluginMediaInfoRequest{
 		Menu:     menus.GetPluginMenus()[0].Menu,
 		PageSize: 10,
 		Page:     1,
@@ -83,7 +83,7 @@ func TestPluginImpl(t *testing.T) {
 		t.Logf("media info %+v\n", info)
 	}
 
-	mediaInfoDetailResp1, err := p.GetPluginMediaItemDetail(&plugin.GetPluginMediaDetailRequest{
+	mediaInfoDetailResp1, err := p.GetPluginMediaDetail(&plugin.GetPluginMediaDetailRequest{
 		MediaInfoId: mediaInfosResp2.MediaInfos[1].PluginMediaId,
 	})
 	if err != nil {
@@ -94,7 +94,7 @@ func TestPluginImpl(t *testing.T) {
 	t.Logf("mediaInfoDetailResp MediaInfoRelations %+v\n", mediaInfoDetailResp1.MediaInfoRelations)
 	t.Logf("mediaInfoDetailResp mediaInfoDetailResp %+v\n", len(mediaInfoDetailResp1.MediaItems))
 	if len(mediaInfoDetailResp1.MediaInfoRelations) > 0 {
-		mediaInfoDetailResp2, err := p.GetPluginMediaItemDetail(&plugin.GetPluginMediaDetailRequest{
+		mediaInfoDetailResp2, err := p.GetPluginMediaDetail(&plugin.GetPluginMediaDetailRequest{
 			MediaInfoId: mediaInfoDetailResp1.MediaInfoRelations[0].PluginMediaId,
 		})
 		if err != nil {
@@ -118,7 +118,7 @@ func TestPluginImpl(t *testing.T) {
 	// 	t.Log("url", item.Url)
 	// }
 	//movie
-	mediaMovieResp2, err := p.ListPluginMediaItemInfo(&plugin.ListPluginMediaInfoRequest{
+	mediaMovieResp2, err := p.ListPluginMediaInfo(&plugin.ListPluginMediaInfoRequest{
 		Menu:     menus.GetPluginMenus()[5].Menu,
 		PageSize: 10,
 		Page:     1,
@@ -126,7 +126,7 @@ func TestPluginImpl(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mediaMovieDetailResp1, err := p.GetPluginMediaItemDetail(&plugin.GetPluginMediaDetailRequest{
+	mediaMovieDetailResp1, err := p.GetPluginMediaDetail(&plugin.GetPluginMediaDetailRequest{
 		MediaInfoId: mediaMovieResp2.MediaInfos[0].PluginMediaId,
 	})
 	if err != nil {
@@ -140,7 +140,7 @@ func TestPluginImpl(t *testing.T) {
 }
 
 func TestGetMediaDetail(t *testing.T) {
-	resp, err := p.GetPluginMediaItemDetail(&plugin.GetPluginMediaDetailRequest{
+	resp, err := p.GetPluginMediaDetail(&plugin.GetPluginMediaDetailRequest{
 		MediaInfoId: "95195",
 	})
 	if err != nil {
