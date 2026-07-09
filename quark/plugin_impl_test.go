@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/medianexapp/plugin_api/plugin"
 )
 
 func TestPluginImpl(t *testing.T) {
@@ -17,6 +19,21 @@ func TestPluginImpl(t *testing.T) {
 
 	if len(auth.AuthMethods) != 2 {
 		t.Fatal("auth methods count != 2")
+	}
+
+	cookie := plugin.String(`token`)
+
+	auth.AuthMethods[0].Method.(*plugin.AuthMethod_Formdata).Formdata.FormItems[0] = &plugin.Formdata_FormItem{
+		Value: cookie,
+	}
+	d, err := p.CheckAuthMethod(auth.AuthMethods[0])
+	if err != nil {
+		t.Fatal("err", err)
+	}
+
+	err = p.CheckAuthData(d.AuthDataBytes)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 }

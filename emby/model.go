@@ -71,7 +71,7 @@ type EmbyItem struct {
 	Studios        []*Item `json:"Studios"`
 	OfficialRating string  `json:"OfficialRating"`
 	OriginalTitle  string  `json:"OriginalTitle"`
-	People         []*Item `json:"Poople"`
+	People         []*Item `json:"People"`
 
 	ImageTags             map[string]string `json:"ImageTags"`
 	BackdropImageTags     []string          `json:"BackdropImageTags"`

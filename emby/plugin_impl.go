@@ -697,7 +697,7 @@ func (p *PluginImpl) embyItemToPluginMedia(item *EmbyItem, pluginMediaType plugi
 			credit := &plugin.PluginMedia_Credit{
 				Name:       person.Name,
 				Character:  person.Role,
-				ProfileUrl: fmt.Sprintf("%s/emby/Items/%s/Images/Primary?maxHeight=300&maxWidth=200&tag=%s&quality=90", addr, item.Id, item.ImageTags["PrimaryImageTag"]),
+				ProfileUrl: fmt.Sprintf("%s/emby/Items/%s/Images/Primary?maxHeight=300&maxWidth=200&tag=%s&quality=90", addr, person.Id, person.PrimaryImageTag),
 			}
 			switch person.Role {
 			case "Actor":

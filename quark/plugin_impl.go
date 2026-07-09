@@ -202,12 +202,9 @@ func (p *PluginImpl) CheckAuthMethod(authMethod *plugin.AuthMethod) (*plugin.Aut
 	switch authMethod.Method.(type) {
 	case *plugin.AuthMethod_Formdata:
 		authDataBytes := authMethod.Method.(*plugin.AuthMethod_Formdata).Formdata.FormItems[0].Value.(*plugin.Formdata_FormItem_StringValue).StringValue.Value
-		for _, cookie := range strings.Split(authDataBytes, ";") {
-			sp := strings.Split(strings.TrimSpace(cookie), "=")
-			if len(sp) != 2 {
-				continue
-			}
-			cookies = append(cookies, &http.Cookie{Name: sp[0], Value: sp[1]})
+		cookies, err = http.ParseCookie(authDataBytes)
+		if err != nil {
+			return nil, err
 		}
 	case *plugin.AuthMethod_Scanqrcode:
 		scanCode := authMethod.Method.(*plugin.AuthMethod_Scanqrcode).Scanqrcode
@@ -219,31 +216,18 @@ func (p *PluginImpl) CheckAuthMethod(authMethod *plugin.AuthMethod) (*plugin.Aut
 			return nil, nil
 		}
 	}
-	cookiesBytes, err := json.Marshal(cookies)
-	return &plugin.AuthData{AuthDataBytes: cookiesBytes}, err
+
+	cookiesBytes := p.convertCookie(cookies)
+	return &plugin.AuthData{AuthDataBytes: []byte(cookiesBytes)}, err
 }
 
 // CheckAuthData use authDataBytes to uath
 // you must store auth data to *PluginImpl
 func (p *PluginImpl) CheckAuthData(authDataBytes []byte) error {
-	slog.Debug("CheckAuthData", "authDataBytes", authDataBytes)
-	var cookies []*http.Cookie
-	err := json.Unmarshal(authDataBytes, &cookies)
+	slog.Debug("CheckAuthData", "authDataBytes", string(authDataBytes))
+	cookies, err := http.ParseCookie(string(authDataBytes))
 	if err != nil {
-		slog.Error("parse cookide json failed", "err", err)
-		formdata := &plugin.Formdata{}
-		err = formdata.UnmarshalVT(authDataBytes)
-		if err != nil {
-			return err
-		}
-		cookieStr := formdata.FormItems[0].Value.(*plugin.Formdata_FormItem_StringValue).StringValue.Value
-		for _, cookie := range strings.Split(cookieStr, ";") {
-			sp := strings.Split(strings.TrimSpace(cookie), "=")
-			if len(sp) != 2 {
-				continue
-			}
-			cookies = append(cookies, &http.Cookie{Name: sp[0], Value: sp[1]})
-		}
+		return err
 	}
 	p.cookies = cookies
 	err = p.request("/config", http.MethodGet, nil, nil, nil)
@@ -367,7 +351,7 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 				Size:               req.FileEntry.Size,
 				Proxy:              true,
 				ProxyChunkParallel: 3,
-				ProxyChunkSize:     1024 * 1024 * 5,
+				ProxyChunkSize:     1024 * 1024 * 10,
 			})
 		}
 	}
@@ -418,12 +402,22 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 	return fileResource, nil
 }
 
+func (p *PluginImpl) convertCookie(cookies []*http.Cookie) string {
+	cc := []string{}
+	for _, c := range cookies {
+		cc = append(cc, c.String())
+	}
+	cookie := strings.Join(cc, "; ")
+	return cookie
+}
+
 func (p *PluginImpl) request(uri string, method string, u url.Values, reqData, respData any) error {
 	if u == nil {
 		u = url.Values{}
 	}
 	p.ratelimit.Wait("")
-	cb := p.hb.SetCookies(p.cookies).SetQueryParams(u).SetMethod(method).SetURL(fmt.Sprintf("%s%s", api, uri))
+
+	cb := p.hb.SetHeader("Cookie", p.convertCookie(p.cookies)).SetQueryParams(u).SetMethod(method).SetURL(fmt.Sprintf("%s%s", api, uri))
 	var body io.Reader
 	if reqData != nil {
 		data, err := json.Marshal(reqData)
