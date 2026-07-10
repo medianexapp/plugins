@@ -216,7 +216,6 @@ func (p *PluginImpl) CheckAuthMethod(authMethod *plugin.AuthMethod) (*plugin.Aut
 			return nil, nil
 		}
 	}
-
 	cookiesBytes := p.convertCookie(cookies)
 	return &plugin.AuthData{AuthDataBytes: []byte(cookiesBytes)}, err
 }
@@ -229,6 +228,7 @@ func (p *PluginImpl) CheckAuthData(authDataBytes []byte) error {
 	if err != nil {
 		return err
 	}
+
 	p.cookies = cookies
 	err = p.request("/config", http.MethodGet, nil, nil, nil)
 	if err != nil {
@@ -328,11 +328,7 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 	if err != nil {
 		return nil, err
 	}
-	cookieStrs := []string{}
-	for _, cookie := range p.cookies {
-		cookieStrs = append(cookieStrs, fmt.Sprintf("%s=%s", cookie.Name, cookie.Value))
-	}
-	cookie := strings.Join(cookieStrs, "; ")
+	cookie := p.convertCookie(p.cookies)
 	if len(respData) == 1 {
 		expireTime, err := getExpires(respData[0].DownloadUrl)
 		if err != nil {
@@ -351,7 +347,7 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 				Size:               req.FileEntry.Size,
 				Proxy:              true,
 				ProxyChunkParallel: 3,
-				ProxyChunkSize:     1024 * 1024 * 10,
+				ProxyChunkSize:     1024 * 1024 * 5,
 			})
 		}
 	}

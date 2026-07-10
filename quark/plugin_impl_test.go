@@ -21,7 +21,7 @@ func TestPluginImpl(t *testing.T) {
 		t.Fatal("auth methods count != 2")
 	}
 
-	cookie := plugin.String(`token`)
+	cookie := plugin.String(``)
 
 	auth.AuthMethods[0].Method.(*plugin.AuthMethod_Formdata).Formdata.FormItems[0] = &plugin.Formdata_FormItem{
 		Value: cookie,
@@ -35,6 +35,7 @@ func TestPluginImpl(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Log(p.convertCookie(p.cookies))
 
 }
 
