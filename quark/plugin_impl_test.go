@@ -35,7 +35,29 @@ func TestPluginImpl(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log(p.convertCookie(p.cookies))
+	// t.Log(p.convertCookie(p.cookies))
+
+	dirEntryResp, err := p.GetDirEntry(&plugin.GetDirEntryRequest{
+		Path:     "/",
+		Page:     1,
+		PageSize: 10,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range dirEntryResp.FileEntries {
+		if entry.FileType != plugin.FileEntry_FileTypeFile {
+			continue
+		}
+		fileResResp, err := p.GetFileResource(&plugin.GetFileResourceRequest{
+			FilePath:  "/" + entry.Name,
+			FileEntry: entry,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Logf("file resourece %+v\n", fileResResp.FileResourceData[0])
+	}
 
 }
 
@@ -57,6 +79,6 @@ func TestQuarkQrcode(t *testing.T) {
 		}
 		time.Sleep(time.Second * 2)
 	}
-	p.cookies = p.hb.GetCookies()
-	fmt.Println("cookie", p.cookies)
+
+	fmt.Println("cookie", p.hb.GetCookies())
 }

@@ -32,7 +32,7 @@ const (
 
 type PluginImpl struct {
 	plugin_api.IPlugin
-	cookies   []*http.Cookie
+	// cookies   []*http.Cookie
 	client    *httpclient.Client
 	hb        *httpclient.Builder
 	ratelimit *ratelimit.RateLimit // move to httpclient
@@ -229,7 +229,7 @@ func (p *PluginImpl) CheckAuthData(authDataBytes []byte) error {
 		return err
 	}
 
-	p.cookies = cookies
+	p.hb = p.hb.SetCookies(cookies)
 	err = p.request("/config", http.MethodGet, nil, nil, nil)
 	if err != nil {
 		return err
@@ -328,7 +328,7 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 	if err != nil {
 		return nil, err
 	}
-	cookie := p.convertCookie(p.cookies)
+
 	if len(respData) == 1 {
 		expireTime, err := getExpires(respData[0].DownloadUrl)
 		if err != nil {
@@ -339,7 +339,7 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 				Resolution:   plugin.FileResource_Original,
 				ResourceType: plugin.FileResource_Video,
 				Header: map[string]string{
-					"Cookie":     cookie,
+					"Cookie":     p.convertCookie(p.hb.GetCookies()),
 					"Referer":    referer,
 					"User-Agent": userAgent,
 				},
@@ -386,7 +386,7 @@ func (p *PluginImpl) GetFileResource(req *plugin.GetFileResourceRequest) (*plugi
 				Resolution:   resolutionMap[item.Resolution],
 				ResourceType: plugin.FileResource_Video,
 				Header: map[string]string{
-					"Cookie":     cookie,
+					"Cookie":     p.convertCookie(p.hb.GetCookies()),
 					"Referer":    referer,
 					"User-Agent": userAgent,
 				},
@@ -413,7 +413,7 @@ func (p *PluginImpl) request(uri string, method string, u url.Values, reqData, r
 	}
 	p.ratelimit.Wait("")
 
-	cb := p.hb.SetHeader("Cookie", p.convertCookie(p.cookies)).SetQueryParams(u).SetMethod(method).SetURL(fmt.Sprintf("%s%s", api, uri))
+	cb := p.hb.SetQueryParams(u).SetMethod(method).SetURL(fmt.Sprintf("%s%s", api, uri))
 	var body io.Reader
 	if reqData != nil {
 		data, err := json.Marshal(reqData)
@@ -432,10 +432,15 @@ func (p *PluginImpl) request(uri string, method string, u url.Values, reqData, r
 	if err != nil {
 		return err
 	}
-	slog.Info("resp bytes", "data", string(respBytes))
+
 	err = json.Unmarshal(respBytes, &response)
 	if err != nil {
 		return err
+	}
+	// slog.Debug("respHeader", "respHeader", respHeader)
+	slog.Info("check set cookie", "setCookie", respHeader.Get("Set-Cookie"))
+	if respHeader.Get("Set-Cookie") != "" {
+		p.hb.ParseCookie(respHeader)
 	}
 	if response.Code != 0 {
 		slog.Error("resp code failed", "response", response)
