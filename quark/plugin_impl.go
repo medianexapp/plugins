@@ -413,7 +413,9 @@ func (p *PluginImpl) request(uri string, method string, u url.Values, reqData, r
 	}
 	p.ratelimit.Wait("")
 
-	cb := p.hb.SetQueryParams(u).SetMethod(method).SetURL(fmt.Sprintf("%s%s", api, uri))
+	cb := p.hb.SetQueryParams(u).
+		SetMethod(method).
+		SetURL(fmt.Sprintf("%s%s", api, uri))
 	var body io.Reader
 	if reqData != nil {
 		data, err := json.Marshal(reqData)
@@ -441,6 +443,7 @@ func (p *PluginImpl) request(uri string, method string, u url.Values, reqData, r
 	slog.Info("check set cookie", "setCookie", respHeader.Get("Set-Cookie"))
 	if respHeader.Get("Set-Cookie") != "" {
 		p.hb.ParseCookie(respHeader)
+		plugin_api.UpdatePluginAuthData([]byte(p.convertCookie(p.hb.GetCookies())))
 	}
 	if response.Code != 0 {
 		slog.Error("resp code failed", "response", response)
