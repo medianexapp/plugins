@@ -8,7 +8,10 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
+
+	putil "plugins/util"
 
 	"github.com/labulakalia/wazero_net/util"
 	_ "github.com/labulakalia/wazero_net/wasi/http"
@@ -584,18 +587,14 @@ func (p *PluginImpl) GetPluginMediaDetail(req *plugin.GetPluginMediaDetailReques
 	return resp, nil
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 func (p *PluginImpl) sendRequest(method string, uri string, reqBody any, respBody any) error {
 	if p.hb == nil {
 		addr := strings.TrimRight(p.embyAuth.Addr.StringValue.Value, "/")
 		p.hb = httpclient.NewBuilder().SetBaseURL(addr).
 			SetHeader("Content-Type", "application/json").
-			SetHeader("user-agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36").
+			SetHeader("user-agent", putil.GetUserAgent()).
 			SetHeader("X-Emby-Authorization",
-				`MediaBrowser Client="Medianex/Plugin", Device="Plugin", DeviceId="plugin", Version="1.0.0"`)
+				fmt.Sprintf(`MediaBrowser Client="Medianex/Plugin", Device="%s", DeviceId="plugin", Version="%s"`, os.Getenv("OS"), os.Getenv("VERSION")))
 	}
 
 	sendReq := p.hb.SetURI(uri).SetMethod(method).Debug()
