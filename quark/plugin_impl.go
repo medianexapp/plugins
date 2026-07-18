@@ -443,7 +443,10 @@ func (p *PluginImpl) request(uri string, method string, u url.Values, reqData, r
 	slog.Info("check set cookie", "setCookie", respHeader.Get("Set-Cookie"))
 	if respHeader.Get("Set-Cookie") != "" {
 		p.hb.ParseCookie(respHeader)
-		plugin_api.UpdatePluginAuthData([]byte(p.convertCookie(p.hb.GetCookies())))
+		err = plugin_api.UpdatePluginAuthData([]byte(p.convertCookie(p.hb.GetCookies())))
+		if err != nil {
+			slog.Error("update plguin auth data failed", "err", err)
+		}
 	}
 	if response.Code != 0 {
 		slog.Error("resp code failed", "response", response)
