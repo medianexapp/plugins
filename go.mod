@@ -10,7 +10,7 @@ require (
 	github.com/medianexapp/ftp v0.0.0-20250425113218-131712bc06d6
 	github.com/medianexapp/go-smb2 v0.0.0-20250425112922-92edacdefca5
 	github.com/medianexapp/gowebdav v0.0.0-20250425112725-41a667437dfa
-	github.com/medianexapp/plugin_api v0.0.35-0.20260715142703-2b0146f8902d
+	github.com/medianexapp/plugin_api v0.0.35-0.20260718142641-9639ba741ce2
 	github.com/medianexapp/sftp v1.13.10-0.20250425113120-4ffdd4c8163a
 	golang.org/x/crypto v0.37.0
 	golang.org/x/oauth2 v0.36.0
@@ -30,6 +30,7 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.4 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/kr/fs v0.1.0 // indirect
+	github.com/medianexapp/m3u v0.0.0-20260718095608-5d2abd5e284b // indirect
 	github.com/tetratelabs/wazero v1.11.0 // indirect
 	golang.org/x/net v0.39.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
