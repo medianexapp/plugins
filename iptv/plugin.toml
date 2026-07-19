@@ -2,6 +2,6 @@ id = "iptv"
 Name = "iptv"
 desc = "iptv plugin desc"
 icon = "iptv.png"
-author = ["author@email.com"]
+author = ["labulakalia@gmail.com"]
 version = "v0.0.1"
 changelog = ["iptv plugin init"]
