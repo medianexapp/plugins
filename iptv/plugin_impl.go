@@ -176,12 +176,12 @@ func (p *PluginImpl) GetPluginFilterItems(req *plugin.PluginItem) (*plugin.Plugi
 // list media info
 func (p *PluginImpl) ListPluginMediaInfo(req *plugin.ListPluginMediaInfoRequest) (*plugin.ListPluginMediaInfoResponse, error) {
 	slog.Debug("ListPluginMediaInfo", "req", req)
-	groupTitle := req.Menu.Name
+	groupTitleId := req.Menu.Value
 	resp := &plugin.ListPluginMediaInfoResponse{
 		MediaInfos: []*plugin.PluginMedia{},
 	}
 	for _, track := range p.playList.Tracks {
-		if track.TagData.GroupTitle == groupTitle {
+		if track.TagData.GroupTitle == groupTitleId {
 			if req.SearchName != "" && !strings.Contains(track.TagData.GroupTitle, req.SearchName) {
 				continue
 			}
@@ -193,6 +193,7 @@ func (p *PluginImpl) ListPluginMediaInfo(req *plugin.ListPluginMediaInfoRequest)
 				Name:          track.Name,
 				PluginMediaId: pluginMediaId,
 				PosterUrl:     track.TagData.TvgLogo,
+				MediaType:     plugin.PluginMedia_MEDIA_INFO,
 			})
 		}
 	}
@@ -213,9 +214,15 @@ func (p *PluginImpl) GetPluginMediaDetail(req *plugin.GetPluginMediaDetailReques
 				Name:          track.Name,
 				PluginMediaId: pluginMediaId,
 				PosterUrl:     track.TagData.TvgLogo,
+				MediaType:     plugin.PluginMedia_MEDIA_INFO,
 			}
 			resp.MediaInfo = pluginMedia
-			resp.MediaItems = []*plugin.PluginMedia{pluginMedia}
+			resp.MediaItems = []*plugin.PluginMedia{&plugin.PluginMedia{
+				Name:          track.Name,
+				PluginMediaId: pluginMediaId,
+				PosterUrl:     track.TagData.TvgLogo,
+				MediaType:     plugin.PluginMedia_MEDIA_PLAY_ITEM,
+			}}
 			return resp, nil
 		}
 	}
