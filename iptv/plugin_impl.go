@@ -180,6 +180,9 @@ func (p *PluginImpl) ListPluginMediaInfo(req *plugin.ListPluginMediaInfoRequest)
 	resp := &plugin.ListPluginMediaInfoResponse{
 		MediaInfos: []*plugin.PluginMedia{},
 	}
+	if req.Page > 1 {
+		return resp, nil
+	}
 	for _, track := range p.playList.Tracks {
 		if track.TagData.GroupTitle == groupTitleId {
 			if req.SearchName != "" && !strings.Contains(track.TagData.GroupTitle, req.SearchName) {
