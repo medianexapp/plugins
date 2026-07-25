@@ -21,8 +21,8 @@ import (
 
 type PluginImpl struct {
 	plugin_api.PluginExport
-	url      string
 	playList m3u.Playlist
+	url      string
 }
 
 func NewPluginImpl() *PluginImpl {
@@ -73,7 +73,6 @@ func (p *PluginImpl) GetAuth() (*plugin.Auth, error) {
 func (p *PluginImpl) CheckAuthMethod(authMethod *plugin.AuthMethod) (*plugin.AuthData, error) {
 	value := authMethod.Method.(*plugin.AuthMethod_Formdata).Formdata.FormItems[0].Value
 	url := value.(*plugin.Formdata_FormItem_StringValue).StringValue.Value
-	p.url = url
 
 	return &plugin.AuthData{
 		AuthDataBytes: []byte(url),
@@ -83,8 +82,8 @@ func (p *PluginImpl) CheckAuthMethod(authMethod *plugin.AuthMethod) (*plugin.Aut
 // CheckAuthData use authDataBytes to uath
 // you must store auth data to *PluginImpl
 func (p *PluginImpl) CheckAuthData(authDataBytes []byte) error {
-	url := p.url
-	resp, err := httpclient.NewBuilder().SetUserAgent(util.GetUserAgent()).Get(url).RawResponse()
+	p.url = string(authDataBytes)
+	resp, err := httpclient.NewBuilder().SetUserAgent(util.GetUserAgent()).Get(p.url).RawResponse()
 	if err != nil {
 		return err
 	}
