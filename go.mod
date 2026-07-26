@@ -3,17 +3,17 @@ module plugins
 go 1.25.0
 
 require (
-	github.com/antihax/optional v1.0.0
 	github.com/boombuler/barcode v1.0.2
 	github.com/hashicorp/go-uuid v1.0.3
-	github.com/labulakalia/wazero_net v0.0.9-0.20260412030540-020aa4f03f56
+	github.com/labulakalia/wazero_net v0.0.9-0.20260726064212-21f3d08f7006
 	github.com/medianexapp/ftp v0.0.0-20250425113218-131712bc06d6
 	github.com/medianexapp/go-smb2 v0.0.0-20250425112922-92edacdefca5
 	github.com/medianexapp/gowebdav v0.0.0-20250425112725-41a667437dfa
-	github.com/medianexapp/plugin_api v0.0.35-0.20260718142641-9639ba741ce2
+	github.com/medianexapp/m3u v0.0.0-20260718095608-5d2abd5e284b
+	github.com/medianexapp/plugin_api v0.0.35-0.20260726062749-512bbe25a7a6
 	github.com/medianexapp/sftp v1.13.10-0.20250425113120-4ffdd4c8163a
-	golang.org/x/crypto v0.37.0
-	golang.org/x/oauth2 v0.36.0
+	golang.org/x/crypto v0.54.0
+	golang.org/x/sync v0.22.0
 )
 
 require (
@@ -30,10 +30,9 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.4 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/kr/fs v0.1.0 // indirect
-	github.com/medianexapp/m3u v0.0.0-20260718095608-5d2abd5e284b // indirect
 	github.com/tetratelabs/wazero v1.11.0 // indirect
-	golang.org/x/net v0.39.0 // indirect
-	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.43.0 // indirect
+	golang.org/x/net v0.57.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/text v0.40.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
 )
