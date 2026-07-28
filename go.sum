@@ -1,7 +1,11 @@
 github.com/aperturerobotics/json-iterator-lite v1.0.0 h1:cihbrYWoK/S2RYXhJLpDZd+GUjVvFJN+D3w1VOqqHRI=
 github.com/aperturerobotics/json-iterator-lite v1.0.0/go.mod h1:snaApCEDtrHHP6UWSLKiYNOZU9A5NyzccKenx9oZEzg=
+github.com/aperturerobotics/json-iterator-lite v1.1.0 h1:ZLLqHhHTKYlmCAP873ras2e/yVU/THtwC+ji3tXLMMg=
+github.com/aperturerobotics/json-iterator-lite v1.1.0/go.mod h1:SvGGBv3OVxUyqO0ZxA/nvs6z3cg7NIbZ64TnbV2OISo=
 github.com/aperturerobotics/protobuf-go-lite v0.12.2 h1:ujwTKgpIYAVsv8VljB6PPMY5SI8i8m/NlIHAkkuxQcU=
 github.com/aperturerobotics/protobuf-go-lite v0.12.2/go.mod h1:lGH3s5ArCTXKI4wJdlNpaybUtwSjfAG0vdWjxOfMcF8=
+github.com/aperturerobotics/protobuf-go-lite v0.15.0 h1:Ke9pkt5zO5iQf2q7iAYsXHlCDhGeQH0cvhCTIiiWUIg=
+github.com/aperturerobotics/protobuf-go-lite v0.15.0/go.mod h1:3Ay/E7iaw2KWLirK3+dDdNJZHK0hu8Y1/kKeYeUa+8s=
 github.com/boombuler/barcode v1.0.2 h1:79yrbttoZrLGkL/oOI8hBrUKucwOL0oOjUgEguGMcJ4=
 github.com/boombuler/barcode v1.0.2/go.mod h1:paBWMcWSl3LHKBqUq+rly7CNSldXjb2rDl3JlRe0mD8=
 github.com/cloudsoda/sddl v0.0.0-20250224235906-926454e91efc h1:0xCWmFKBmarCqqqLeM7jFBSw/Or81UEElFqO8MY+GDs=
@@ -50,6 +54,12 @@ github.com/medianexapp/m3u v0.0.0-20260718095608-5d2abd5e284b h1:evGpq1d4mJckrVE
 github.com/medianexapp/m3u v0.0.0-20260718095608-5d2abd5e284b/go.mod h1:kuKO5A4Jdvf9j3m+DdJXnbGg2MVBJu6vciqqYP795kA=
 github.com/medianexapp/plugin_api v0.0.35-0.20260726062749-512bbe25a7a6 h1:WiQA+Wpf8wouODr9HaDfcAjXg/i7ZqBCs87bCU2eST8=
 github.com/medianexapp/plugin_api v0.0.35-0.20260726062749-512bbe25a7a6/go.mod h1:2NrocrUp7ZA3rV9dodCGQFuvESrEO3Bf28WsOl73aU0=
+github.com/medianexapp/plugin_api v0.0.35-0.20260726073930-9e468e6a742f h1:ZuSx+wUFSdRnCLutsgPHGCs8ful2vIRQpjbTe+c3+14=
+github.com/medianexapp/plugin_api v0.0.35-0.20260726073930-9e468e6a742f/go.mod h1:2NrocrUp7ZA3rV9dodCGQFuvESrEO3Bf28WsOl73aU0=
+github.com/medianexapp/plugin_api v0.0.35-0.20260726121718-60ffdc2bb89b h1:21i+D3RlgvEHNH1cEPrRHT+OqVYU8lnxhk2z/feZmQw=
+github.com/medianexapp/plugin_api v0.0.35-0.20260726121718-60ffdc2bb89b/go.mod h1:2NrocrUp7ZA3rV9dodCGQFuvESrEO3Bf28WsOl73aU0=
+github.com/medianexapp/plugin_api v0.0.35-0.20260726124518-29386c870cab h1:6FMB6g5rAKOZRmdL9DBHrwRjbtGo5JNWsKO2Ojz0Skw=
+github.com/medianexapp/plugin_api v0.0.35-0.20260726124518-29386c870cab/go.mod h1:2NrocrUp7ZA3rV9dodCGQFuvESrEO3Bf28WsOl73aU0=
 github.com/medianexapp/sftp v1.13.10-0.20250425113120-4ffdd4c8163a h1:a1AMBh4Glxjl8gb9JW1kJ1W92cgBBkLlnZHCOAPBjQg=
 github.com/medianexapp/sftp v1.13.10-0.20250425113120-4ffdd4c8163a/go.mod h1:BhBMCAsN8EaWmFxpa/Au+jX8fG8CLFKXs8LOjksAFH0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
@@ -65,6 +75,8 @@ github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 github.com/tetratelabs/wazero v1.11.0 h1:+gKemEuKCTevU4d7ZTzlsvgd1uaToIDtlQlmNbwqYhA=
 github.com/tetratelabs/wazero v1.11.0/go.mod h1:eV28rsN8Q+xwjogd7f4/Pp4xFxO7uOGbLcD/LzB1wiU=
+github.com/tetratelabs/wazero v1.12.0 h1:DuWcpNu/FzgEXgGBDp8J1Spc+CWOvvtvVyjKlaZopYU=
+github.com/tetratelabs/wazero v1.12.0/go.mod h1:LvKtzl2RqO4gyF27BiXU+nKAjcV8f38U+kP/q2vgxh0=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=

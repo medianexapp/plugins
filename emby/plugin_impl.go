@@ -558,6 +558,7 @@ func (p *PluginImpl) GetPluginMediaDetail(req *plugin.GetPluginMediaDetailReques
 				resp.MediaInfoRelations = append(resp.MediaInfoRelations, p.embyItemToPluginMedia(seasonItem, plugin.PluginMedia_MEDIA_INFO))
 			}
 		}
+		resp.MediaInfo.ShowDetail = true
 		resp.MediaInfo.LogoUrl = resp.MediaSeries.LogoUrl
 		episodesparams := url.Values{}
 		episodesparams.Set("SeasonId", seasonId)

@@ -217,6 +217,7 @@ func (p *PluginImpl) GetPluginMediaDetail(req *plugin.GetPluginMediaDetailReques
 				PluginMediaId: pluginMediaId,
 				PosterUrl:     track.TagData.TvgLogo,
 				MediaType:     plugin.PluginMedia_MEDIA_INFO,
+				ShowDetail:    false,
 			}
 			resp.MediaInfo = pluginMedia
 			resp.MediaItems = []*plugin.PluginMedia{&plugin.PluginMedia{
