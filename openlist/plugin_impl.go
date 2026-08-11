@@ -69,10 +69,6 @@ func (p *PluginImpl) GetAuth() (*plugin.Auth, error) {
 								Name:  "Password",
 								Value: plugin.ObscureString(""),
 							},
-							{
-								Name:  "Default Token Expired(H)",
-								Value: plugin.Int64(48),
-							},
 						},
 					},
 				},
@@ -137,7 +133,6 @@ func (p *PluginImpl) CheckAuthMethod(authMethod *plugin.AuthMethod) (*plugin.Aut
 		p.authData.Addr = forms[0].Value.(*plugin.Formdata_FormItem_StringValue).StringValue.Value
 		p.authData.Username = forms[1].Value.(*plugin.Formdata_FormItem_StringValue).StringValue.Value
 		p.authData.Password = forms[2].Value.(*plugin.Formdata_FormItem_ObscureStringValue).ObscureStringValue.Value
-		p.authData.TokenExpired = forms[3].Value.(*plugin.Formdata_FormItem_Int64Value).Int64Value.Value
 	}
 	authResp := &TokenData{}
 	err := p.request(http.MethodPost, "/api/auth/login", &AuthLogin{
@@ -154,7 +149,7 @@ func (p *PluginImpl) CheckAuthMethod(authMethod *plugin.AuthMethod) (*plugin.Aut
 	}
 	return &plugin.AuthData{
 		AuthDataBytes:       authData,
-		AuthDataExpiredTime: uint64(time.Hour * time.Duration(p.authData.TokenExpired)),
+		AuthDataExpiredTime: uint64(time.Now().Add(time.Hour * 24).Unix()),
 	}, nil
 }
 
